@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import UserManager from "./UserManager";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [resetLoading, setResetLoading] = useState(false);
+  const [showUserManager, setShowUserManager] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
     fetchAdminStats();
@@ -65,6 +68,42 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCreateUser = () => {
+    setEditingUser(null);
+    setShowUserManager(true);
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setShowUserManager(true);
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        fetchAdminStats();
+        alert("User deleted successfully!");
+      } else {
+        alert("Failed to delete user");
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Error deleting user");
+    }
+  };
+
+  const handleUserUpdate = () => {
+    fetchAdminStats();
+    setShowUserManager(false);
+    setEditingUser(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
@@ -91,7 +130,9 @@ export default function AdminDashboard() {
               <h1 className="text-3xl font-bold text-gray-800">
                 Admin Dashboard
               </h1>
-              <p className="text-gray-600">System overview and management</p>
+              <p className="text-gray-600">
+                System overview and user management
+              </p>
             </div>
           </div>
           <button
@@ -164,13 +205,20 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Admin Actions */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-pink-100 mb-8">
           <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span>⚠️</span>
+            <span>⚙️</span>
             Admin Actions
           </h2>
           <div className="flex flex-wrap gap-4">
+            <button
+              onClick={handleCreateUser}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-400 to-blue-400 text-white rounded-xl font-medium hover:from-green-500 hover:to-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <span>👤</span>
+              Create New User
+            </button>
             <button
               onClick={handleResetAll}
               disabled={resetLoading}
@@ -188,65 +236,127 @@ export default function AdminDashboard() {
 
         {/* Users List */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-pink-100">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">
-            Registered Users
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">
-                    Name
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">
-                    Email
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">
-                    Role
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">
-                    Joined
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr
-                    key={user._id}
-                    className="border-b border-gray-100 hover:bg-pink-50"
-                  >
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full flex items-center justify-center text-white font-medium">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-medium text-gray-800">
-                          {user.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">{user.email}</td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          user.role === "admin"
-                            ? "bg-purple-100 text-purple-700"
-                            : "bg-pink-100 text-pink-700"
-                        }`}
-                      >
-                        {user.role === "admin" ? "👑 Admin" : "👤 User"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-800">
+              User Management 👥
+            </h2>
+            <span className="text-sm text-gray-500">
+              {users.length} user{users.length !== 1 ? "s" : ""} registered
+            </span>
           </div>
+
+          {users.length === 0 ? (
+            <div className="text-center py-8">
+              <span className="text-4xl mb-4 block">👥</span>
+              <p className="text-gray-500 mb-4">No users registered yet.</p>
+              <button
+                onClick={handleCreateUser}
+                className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-400 text-white rounded-lg hover:from-green-500 hover:to-blue-500 transition-all duration-200"
+              >
+                Create First User
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Name
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Email
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Role
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Tasks
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr
+                      key={user._id}
+                      className="border-b border-gray-100 hover:bg-gray-50"
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+                              user.role === "admin"
+                                ? "bg-gradient-to-r from-pink-400 to-purple-400"
+                                : "bg-gradient-to-r from-blue-400 to-green-400"
+                            }`}
+                          >
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium text-gray-900">
+                            {user.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">{user.email}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            user.role === "admin"
+                              ? "bg-pink-100 text-pink-700"
+                              : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
+                          {user.role === "admin" ? "👑 Admin" : "👤 User"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {user.taskCount || 0} tasks
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditUser(user)}
+                            className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors text-sm"
+                          >
+                            Edit
+                          </button>
+                          {user.role !== "admin" && (
+                            <button
+                              onClick={() => handleDeleteUser(user._id)}
+                              className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors text-sm"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* User Manager Modal */}
+      {showUserManager && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-pink-100">
+            <UserManager
+              user={editingUser}
+              onClose={() => {
+                setShowUserManager(false);
+                setEditingUser(null);
+              }}
+              onUserUpdate={handleUserUpdate}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

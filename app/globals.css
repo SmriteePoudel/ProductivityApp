@@ -85,6 +85,42 @@ body {
   background: var(--primary-dark);
 }
 
+/* Sidebar specific scrollbar */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: rgba(251, 182, 206, 0.1);
+  border-radius: 3px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #fbb6ce, #f687b3);
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f687b3, #f565a3);
+}
+
+/* Dark mode sidebar scrollbar */
+@media (prefers-color-scheme: dark) {
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: rgba(85, 60, 154, 0.1);
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #553c9a, #44337a);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #44337a, #322659);
+  }
+}
+
 /* Custom animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }

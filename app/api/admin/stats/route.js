@@ -5,6 +5,7 @@ import {
   getUsers,
   getAllTasks,
   getAllCategories,
+  findTasksByUser,
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
@@ -17,15 +18,19 @@ export const GET = requireAdmin(async (request) => {
     const tasks = getAllTasks();
     const categories = getAllCategories();
 
+    // Add task count for each user
+    const usersWithTaskCount = users.map((user) => ({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      taskCount: findTasksByUser(user._id).length,
+    }));
+
     return NextResponse.json({
       stats,
-      users: users.map((user) => ({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt,
-      })),
+      users: usersWithTaskCount,
       tasks: tasks.slice(0, 10), // Return first 10 tasks
       categories: categories.slice(0, 10), // Return first 10 categories
     });

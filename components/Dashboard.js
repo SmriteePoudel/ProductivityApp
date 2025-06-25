@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react";
 
-export default function Dashboard({ user, onAddTask, refreshKey = 0 }) {
+export default function Dashboard({
+  user,
+  onAddTask,
+  onManageCategories,
+  refreshKey = 0,
+}) {
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
@@ -173,7 +178,10 @@ export default function Dashboard({ user, onAddTask, refreshKey = 0 }) {
             <span>➕</span>
             <span>Add New Task</span>
           </button>
-          <button className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center space-x-2">
+          <button
+            onClick={onManageCategories}
+            className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center space-x-2"
+          >
             <span>🏷️</span>
             <span>Manage Categories</span>
           </button>

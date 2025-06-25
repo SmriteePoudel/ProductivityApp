@@ -43,9 +43,18 @@ export default function TaskForm({ onClose, task = null, onTaskCreated }) {
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories || []);
+      } else if (response.status === 401) {
+        // User not authenticated, categories will be empty
+        console.log("User not authenticated, categories will be empty");
+        setCategories([]);
+      } else {
+        console.error("Failed to fetch categories:", response.status);
+        setCategories([]);
       }
     } catch (error) {
       console.error("Fetch categories error:", error);
+      // Set empty categories array so the form can still work
+      setCategories([]);
     }
   };
 

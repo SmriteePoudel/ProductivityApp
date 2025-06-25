@@ -6,6 +6,7 @@ import Clock from "./Clock";
 import Timer from "./Timer";
 import Pomodoro from "./Pomodoro";
 import Reminders from "./Reminders";
+import EditableContent from "./EditableContent";
 
 export default function Sidebar({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState("calendar");
@@ -64,36 +65,35 @@ export default function Sidebar({ isOpen, onClose }) {
           ))}
         </div>
 
-        {/* Main Tools Content - Horizontal Scroll */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex w-max min-w-full">
-            <div
-              className={`w-80 flex-shrink-0 p-4 ${
-                activeTab === "calendar" ? "block" : "hidden"
-              }`}
-            >
+        {/* Tools Content Area - Fixed Height with Scroll */}
+        <div className="flex-1 flex flex-col">
+          {/* Tools Display Area */}
+          <div className="flex-1 p-4">
+            <div className={`${activeTab === "calendar" ? "block" : "hidden"}`}>
               <Calendar />
             </div>
-            <div
-              className={`w-80 flex-shrink-0 p-4 ${
-                activeTab === "clock" ? "block" : "hidden"
-              }`}
-            >
+            <div className={`${activeTab === "clock" ? "block" : "hidden"}`}>
               <Clock />
             </div>
-            <div
-              className={`w-80 flex-shrink-0 p-4 ${
-                activeTab === "timer" ? "block" : "hidden"
-              }`}
-            >
+            <div className={`${activeTab === "timer" ? "block" : "hidden"}`}>
               <Timer />
             </div>
-            <div
-              className={`w-80 flex-shrink-0 p-4 ${
-                activeTab === "pomodoro" ? "block" : "hidden"
-              }`}
-            >
+            <div className={`${activeTab === "pomodoro" ? "block" : "hidden"}`}>
               <Pomodoro />
+            </div>
+          </div>
+
+          {/* Scrollable Content Area Below Tools */}
+          <div className="border-t border-pink-100 dark:border-purple-600">
+            <div className="p-3 bg-pink-50 dark:bg-purple-900/20 border-b border-pink-100 dark:border-purple-600">
+              <h3 className="text-sm font-medium text-pink-600 dark:text-purple-400 mb-2">
+                📋 Personal Content
+              </h3>
+            </div>
+            <div className="h-64 overflow-y-auto sidebar-scrollbar">
+              <div className="p-4">
+                <EditableContent />
+              </div>
             </div>
           </div>
         </div>

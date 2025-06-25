@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -125,6 +126,7 @@ export default function Home() {
             <Dashboard
               user={user}
               onAddTask={() => setShowTaskForm(true)}
+              onManageCategories={() => setShowCategoryManager(true)}
               refreshKey={refreshKey}
             />
           </div>
@@ -138,6 +140,18 @@ export default function Home() {
             <TaskForm
               onClose={() => setShowTaskForm(false)}
               onTaskCreated={refreshDashboard}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Category Manager Modal */}
+      {showCategoryManager && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-pink-100 dark:border-purple-600 max-h-[90vh] overflow-y-auto">
+            <CategoryManager
+              onClose={() => setShowCategoryManager(false)}
+              onCategoryUpdate={refreshDashboard}
             />
           </div>
         </div>

@@ -14,12 +14,21 @@ export async function GET(request) {
     await connectDB();
 
     const token = request.cookies.get("token")?.value;
+    console.log("Categories API - Token:", token ? "Present" : "Missing");
+
     if (!token) {
+      console.log("Categories API - No token provided");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
+    console.log(
+      "Categories API - Token decoded:",
+      decoded ? "Success" : "Failed"
+    );
+
     if (!decoded) {
+      console.log("Categories API - Invalid token");
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
@@ -30,6 +39,7 @@ export async function GET(request) {
       categories = findCategoriesByUser(decoded.userId);
     }
 
+    console.log("Categories API - Returning categories:", categories.length);
     return NextResponse.json({ categories });
   } catch (error) {
     console.error("Get categories error:", error);
