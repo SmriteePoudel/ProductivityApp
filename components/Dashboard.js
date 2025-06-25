@@ -92,7 +92,7 @@ export default function Dashboard({
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent mb-2">
+        <h1 className="text-3xl font-bold gradient-text mb-2">
           Welcome back, {user.name}! ✨
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
@@ -102,7 +102,7 @@ export default function Dashboard({
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-pastel-pink/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-accent shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -112,13 +112,13 @@ export default function Dashboard({
                 {stats.total}
               </p>
             </div>
-            <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
+            <div className="p-3 bg-pastel-blue rounded-lg">
               <span className="text-2xl">📝</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-pastel-mint/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-accent shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -128,13 +128,13 @@ export default function Dashboard({
                 {stats.completed}
               </p>
             </div>
-            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <div className="p-3 bg-pastel-yellow rounded-lg">
               <span className="text-2xl">✅</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-pastel-yellow/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-accent shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -144,13 +144,13 @@ export default function Dashboard({
                 {stats.pending}
               </p>
             </div>
-            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+            <div className="p-3 bg-pastel-pink rounded-lg">
               <span className="text-2xl">⏳</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-pastel-blue/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-accent shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -158,7 +158,7 @@ export default function Dashboard({
               </p>
               <p className="text-2xl font-bold text-red-500">{stats.overdue}</p>
             </div>
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <div className="p-3 bg-pastel-mint rounded-lg">
               <span className="text-2xl">⚠️</span>
             </div>
           </div>
@@ -166,21 +166,21 @@ export default function Dashboard({
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-pastel-lilac/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-accent shadow-sm">
+        <h2 className="text-xl font-semibold gradient-text mb-4">
           Quick Actions ✨
         </h2>
         <div className="flex flex-wrap gap-4">
           <button
             onClick={onAddTask}
-            className="px-6 py-3 bg-gradient-to-r from-pink-300 to-purple-400 text-white rounded-lg hover:from-pink-400 hover:to-purple-500 transition-all duration-300 flex items-center space-x-2 shadow-sm hover:shadow-md transform hover:scale-105"
+            className="px-6 py-3 bg-gradient-to-r from-pastel-pink to-pastel-blue text-accent rounded-lg hover:from-pastel-blue hover:to-pastel-pink transition-all duration-300 flex items-center space-x-2 shadow-sm hover:shadow-md transform hover:scale-105"
           >
             <span>➕</span>
             <span>Add New Task</span>
           </button>
           <button
             onClick={onManageCategories}
-            className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center space-x-2"
+            className="px-6 py-3 bg-pastel-yellow text-accent rounded-lg hover:bg-pastel-mint transition-colors flex items-center space-x-2"
           >
             <span>🏷️</span>
             <span>Manage Categories</span>
@@ -189,14 +189,14 @@ export default function Dashboard({
       </div>
 
       {/* Recent Tasks */}
-      <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm">
+      <div className="bg-pastel-blue/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-accent shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold gradient-text">
             Recent Tasks 📋
           </h2>
           <a
             href="#"
-            className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 text-sm font-medium"
+            className="text-accent hover:text-pastel-pink text-sm font-medium"
           >
             View All →
           </a>

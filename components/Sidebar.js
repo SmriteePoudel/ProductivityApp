@@ -30,33 +30,31 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-r border-pink-100 dark:border-purple-600 shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-gradient-to-br from-pastel-pink via-pastel-blue to-pastel-yellow dark:from-gray-900 dark:via-purple-900 dark:to-gray-800 backdrop-blur-md border-r border-accent shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 lg:static lg:z-auto flex flex-col`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-pink-100 dark:border-purple-600">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">
-            Tools ✨
-          </h2>
+        <div className="flex items-center justify-between p-4 border-b border-accent bg-gradient-to-r from-pastel-pink to-pastel-blue">
+          <h2 className="text-xl font-bold gradient-text">Tools ✨</h2>
           <button
             onClick={onClose}
-            className="lg:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="lg:hidden text-gray-400 hover:text-accent transition-colors"
           >
             ✕
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-pink-100 dark:border-purple-600">
+        <div className="flex border-b border-accent bg-gradient-to-r from-pastel-yellow to-pastel-blue">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3 px-2 text-sm font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center space-x-2 py-3 px-2 text-sm font-medium transition-colors rounded-t-lg ${
                 activeTab === tab.id
-                  ? "text-pink-500 dark:text-pink-400 border-b-2 border-pink-300 dark:border-pink-400"
-                  : "text-gray-600 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400"
+                  ? "bg-pastel-blue text-accent border-b-2 border-accent shadow"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-pastel-pink hover:text-accent"
               }`}
             >
               <span className="text-lg">{tab.icon}</span>
@@ -84,9 +82,9 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
 
           {/* Scrollable Content Area Below Tools */}
-          <div className="border-t border-pink-100 dark:border-purple-600">
-            <div className="p-3 bg-pink-50 dark:bg-purple-900/20 border-b border-pink-100 dark:border-purple-600">
-              <h3 className="text-sm font-medium text-pink-600 dark:text-purple-400 mb-2">
+          <div className="border-t border-accent bg-pastel-yellow/60">
+            <div className="p-3 bg-pastel-pink border-b border-accent">
+              <h3 className="text-sm font-medium text-accent mb-2">
                 📋 Personal Content
               </h3>
             </div>
@@ -99,7 +97,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* Reminders Section - Bottom of Sidebar */}
-        <div className="border-t border-pink-100 dark:border-purple-600 p-4">
+        <div className="border-t border-accent p-4 bg-pastel-blue/40">
           <Reminders />
         </div>
       </div>
