@@ -6,6 +6,7 @@ import {
   getAllTasks,
   getAllCategories,
   findTasksByUser,
+  getActiveUserCount,
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
@@ -17,6 +18,7 @@ export const GET = requireAdmin(async (request) => {
     const users = getUsers();
     const tasks = getAllTasks();
     const categories = getAllCategories();
+    const activeUserCount = getActiveUserCount();
 
     // Add task count for each user
     const usersWithTaskCount = users.map((user) => ({
@@ -25,6 +27,7 @@ export const GET = requireAdmin(async (request) => {
       email: user.email,
       role: user.role,
       createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
       taskCount: findTasksByUser(user._id).length,
     }));
 
@@ -33,6 +36,7 @@ export const GET = requireAdmin(async (request) => {
       users: usersWithTaskCount,
       tasks: tasks.slice(0, 10), // Return first 10 tasks
       categories: categories.slice(0, 10), // Return first 10 categories
+      activeUserCount,
     });
   } catch (error) {
     console.error("Get admin stats error:", error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export default function TaskList() {
   const [tasks, setTasks] = useState([]);
@@ -18,17 +18,36 @@ export default function TaskList() {
     pages: 0,
   });
 
-  useEffect(() => {
-    fetchTasks();
-    fetchCategories();
-  }, [filters, pagination.page]);
+  // Debounced fetch function to prevent excessive API calls
+  const debouncedFetch = useCallback(
+    (() => {
+      let timeoutId;
+      return (filters, page) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          fetchTasks(filters, page);
+        }, 300);
+      };
+    })(),
+    []
+  );
 
-  const fetchTasks = async () => {
+  useEffect(() => {
+    fetchTasks(filters, pagination.page);
+    fetchCategories();
+  }, []); // Only run on mount
+
+  useEffect(() => {
+    debouncedFetch(filters, pagination.page);
+  }, [filters, pagination.page, debouncedFetch]);
+
+  const fetchTasks = async (currentFilters, currentPage) => {
     try {
+      setIsLoading(true);
       const params = new URLSearchParams({
-        page: pagination.page,
+        page: currentPage,
         limit: pagination.limit,
-        ...filters,
+        ...currentFilters,
       });
 
       const response = await fetch(`/api/tasks?${params}`);
@@ -69,7 +88,12 @@ export default function TaskList() {
       });
 
       if (response.ok) {
-        fetchTasks();
+        // Optimistically update the task in the local state
+        setTasks((prevTasks) =>
+          prevTasks.map((task) =>
+            task._id === taskId ? { ...task, status: newStatus } : task
+          )
+        );
       }
     } catch (error) {
       console.error("Update task error:", error);
@@ -85,7 +109,10 @@ export default function TaskList() {
       });
 
       if (response.ok) {
-        fetchTasks();
+        // Optimistically remove the task from local state
+        setTasks((prevTasks) =>
+          prevTasks.filter((task) => task._id !== taskId)
+        );
       }
     } catch (error) {
       console.error("Delete task error:", error);
@@ -203,10 +230,10 @@ export default function TaskList() {
           tasks.map((task) => (
             <div
               key={task._id}
-              className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm rounded-xl p-6 border border-pink-100 dark:border-purple-600 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4 flex-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4 flex-1">
                   <input
                     type="checkbox"
                     checked={task.status === "completed"}
@@ -216,50 +243,24 @@ export default function TaskList() {
                         task.status === "completed" ? "pending" : "completed"
                       )
                     }
-                    className="mt-1 w-4 h-4 text-pink-400 bg-gray-100 border-gray-300 rounded focus:ring-pink-200"
+                    className="w-5 h-5 text-pink-400 bg-gray-100 border-gray-300 rounded focus:ring-pink-200"
                   />
-
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h3
-                        className={`text-lg font-semibold ${
-                          task.status === "completed"
-                            ? "line-through text-gray-500"
-                            : "text-gray-900 dark:text-white"
-                        }`}
-                      >
-                        {task.title}
-                      </h3>
-                      {task.category && (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400">
-                          {task.category.name}
-                        </span>
-                      )}
-                    </div>
-
+                    <h3
+                      className={`font-medium text-lg ${
+                        task.status === "completed"
+                          ? "line-through text-gray-500"
+                          : "text-gray-900 dark:text-white"
+                      }`}
+                    >
+                      {task.title}
+                    </h3>
                     {task.description && (
-                      <p
-                        className={`text-gray-600 dark:text-gray-300 mb-3 ${
-                          task.status === "completed" ? "line-through" : ""
-                        }`}
-                      >
+                      <p className="text-gray-600 dark:text-gray-300 mt-1">
                         {task.description}
                       </p>
                     )}
-
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                      {task.dueDate && (
-                        <span>📅 {formatDate(task.dueDate)}</span>
-                      )}
-                      {task.priority && (
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
-                            task.priority
-                          )}`}
-                        >
-                          {task.priority}
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2 mt-2">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
                           task.status
@@ -267,30 +268,25 @@ export default function TaskList() {
                       >
                         {task.status}
                       </span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                          task.priority
+                        )}`}
+                      >
+                        {task.priority}
+                      </span>
+                      {task.dueDate && (
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          Due: {formatDate(task.dueDate)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center space-x-2 ml-4">
-                  <button
-                    onClick={() =>
-                      handleStatusChange(
-                        task._id,
-                        task.status === "completed" ? "pending" : "completed"
-                      )
-                    }
-                    className="p-2 text-gray-400 hover:text-green-500 dark:hover:text-green-400 transition-colors"
-                    title={
-                      task.status === "completed"
-                        ? "Mark as pending"
-                        : "Mark as completed"
-                    }
-                  >
-                    {task.status === "completed" ? "↩️" : "✅"}
-                  </button>
+                <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleDelete(task._id)}
-                    className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                    className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     title="Delete task"
                   >
                     🗑️
@@ -304,27 +300,25 @@ export default function TaskList() {
 
       {/* Pagination */}
       {pagination.pages > 1 && (
-        <div className="flex justify-center space-x-2">
+        <div className="flex justify-center items-center space-x-2 mt-8">
           <button
             onClick={() =>
               setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
             }
             disabled={pagination.page === 1}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-pink-100 dark:bg-pink-900/20 text-pink-600 dark:text-pink-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-200 dark:hover:bg-pink-900/40 transition-colors"
           >
             Previous
           </button>
-
-          <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+          <span className="px-4 py-2 text-gray-600 dark:text-gray-300">
             Page {pagination.page} of {pagination.pages}
           </span>
-
           <button
             onClick={() =>
               setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
             }
             disabled={pagination.page === pagination.pages}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-pink-100 dark:bg-pink-900/20 text-pink-600 dark:text-pink-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-pink-200 dark:hover:bg-pink-900/40 transition-colors"
           >
             Next
           </button>

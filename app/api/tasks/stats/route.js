@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectDB, findTasksByUser } from "@/lib/db";
+import { connectDB, getUserStats } from "@/lib/db";
 import { verifyToken } from "@/lib/auth";
 
 export async function GET(request) {
@@ -16,25 +16,10 @@ export async function GET(request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const tasks = findTasksByUser(decoded.userId);
+    // Use the optimized cached stats function
+    const stats = getUserStats(decoded.userId);
 
-    // Calculate stats
-    const total = tasks.length;
-    const completed = tasks.filter(
-      (task) => task.status === "completed"
-    ).length;
-    const pending = tasks.filter((task) => task.status === "pending").length;
-    const overdue = tasks.filter((task) => {
-      if (!task.dueDate || task.status === "completed") return false;
-      return new Date(task.dueDate) < new Date();
-    }).length;
-
-    return NextResponse.json({
-      total,
-      completed,
-      pending,
-      overdue,
-    });
+    return NextResponse.json(stats);
   } catch (error) {
     console.error("Get stats error:", error);
     return NextResponse.json(

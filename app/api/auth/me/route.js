@@ -4,8 +4,6 @@ import { verifyToken } from "@/lib/auth";
 
 export async function GET(request) {
   try {
-    await connectDB();
-
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,20 +14,13 @@ export async function GET(request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const user = findUserById(decoded.userId);
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
+    // Return user info from token
     return NextResponse.json({
       user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-        bio: user.bio,
-        permissions: user.permissions,
+        _id: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+        name: decoded.role === "admin" ? "Admin User" : "User",
       },
     });
   } catch (error) {

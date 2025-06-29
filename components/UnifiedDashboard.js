@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import Dashboard from "./Dashboard";
 import CategoryManager from "./CategoryManager";
@@ -8,7 +10,10 @@ import Calendar from "./Calendar";
 import Pomodoro from "./Pomodoro";
 import Timer from "./Timer";
 import Clock from "./Clock";
+import ProjectManager from "./ProjectManager";
 import { useRouter } from "next/navigation";
+import Sidebar from "./Sidebar";
+import AIChatBot from "./AIChatBot";
 
 // Placeholder components for Settings, Roles, Permissions
 function Settings({ onProfileUpdate }) {
@@ -521,494 +526,911 @@ function Settings({ onProfileUpdate }) {
   );
 }
 function RolesManager() {
+  const [roles, setRoles] = useState([
+    {
+      id: 1,
+      name: "user",
+      purpose: "Default role for general usage",
+      permissions: [
+        "read_own_content",
+        "create_content",
+        "edit_own_content",
+        "delete_own_content",
+      ],
+      userCount: 0,
+      color: "from-blue-500 to-cyan-600",
+      icon: "👤",
+    },
+    {
+      id: 2,
+      name: "admin",
+      purpose: "Full control over everything",
+      permissions: [
+        "read_all",
+        "create_all",
+        "edit_all",
+        "delete_all",
+        "manage_users",
+        "manage_roles",
+        "manage_permissions",
+        "system_settings",
+      ],
+      userCount: 0,
+      color: "from-purple-600 to-pink-600",
+      icon: "👑",
+    },
+    {
+      id: 3,
+      name: "moderator",
+      purpose:
+        "Can manage other users' content (edit/delete), but not full admin power",
+      permissions: [
+        "read_all",
+        "create_content",
+        "edit_all",
+        "delete_all",
+        "moderate_content",
+        "manage_categories",
+      ],
+      userCount: 0,
+      color: "from-orange-500 to-red-600",
+      icon: "🛡️",
+    },
+    {
+      id: 4,
+      name: "editor",
+      purpose: "Can create and edit content, but cannot manage users",
+      permissions: [
+        "read_all",
+        "create_content",
+        "edit_all",
+        "delete_own_content",
+        "publish_content",
+      ],
+      userCount: 0,
+      color: "from-green-500 to-emerald-600",
+      icon: "✏️",
+    },
+    {
+      id: 5,
+      name: "viewer",
+      purpose: "Read-only access to certain areas",
+      permissions: ["read_public", "read_own_content"],
+      userCount: 0,
+      color: "from-gray-500 to-slate-600",
+      icon: "👁️",
+    },
+  ]);
+
+  const [editingRole, setEditingRole] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const allPermissions = [
+    {
+      key: "read_public",
+      label: "Read Public Content",
+      description: "Can view public content",
+      icon: "📖",
+    },
+    {
+      key: "read_own_content",
+      label: "Read Own Content",
+      description: "Can view their own content",
+      icon: "📄",
+    },
+    {
+      key: "read_all",
+      label: "Read All Content",
+      description: "Can view all content",
+      icon: "🔍",
+    },
+    {
+      key: "create_content",
+      label: "Create Content",
+      description: "Can create new content",
+      icon: "➕",
+    },
+    {
+      key: "edit_own_content",
+      label: "Edit Own Content",
+      description: "Can edit their own content",
+      icon: "✏️",
+    },
+    {
+      key: "edit_all",
+      label: "Edit All Content",
+      description: "Can edit any content",
+      icon: "🔄",
+    },
+    {
+      key: "delete_own_content",
+      label: "Delete Own Content",
+      description: "Can delete their own content",
+      icon: "🗑️",
+    },
+    {
+      key: "delete_all",
+      label: "Delete All Content",
+      description: "Can delete any content",
+      icon: "💥",
+    },
+    {
+      key: "publish_content",
+      label: "Publish Content",
+      description: "Can publish content",
+      icon: "📢",
+    },
+    {
+      key: "moderate_content",
+      label: "Moderate Content",
+      description: "Can moderate user content",
+      icon: "⚖️",
+    },
+    {
+      key: "manage_categories",
+      label: "Manage Categories",
+      description: "Can manage content categories",
+      icon: "📂",
+    },
+    {
+      key: "manage_users",
+      label: "Manage Users",
+      description: "Can manage user accounts",
+      icon: "👥",
+    },
+    {
+      key: "manage_roles",
+      label: "Manage Roles",
+      description: "Can manage user roles",
+      icon: "🎭",
+    },
+    {
+      key: "manage_permissions",
+      label: "Manage Permissions",
+      description: "Can manage system permissions",
+      icon: "🔐",
+    },
+    {
+      key: "system_settings",
+      label: "System Settings",
+      description: "Can access system settings",
+      icon: "⚙️",
+    },
+  ];
+
+  const roleColors = [
+    "from-blue-500 to-cyan-600",
+    "from-purple-600 to-pink-600",
+    "from-orange-500 to-red-600",
+    "from-green-500 to-emerald-600",
+    "from-gray-500 to-slate-600",
+    "from-yellow-500 to-orange-600",
+    "from-pink-500 to-rose-600",
+    "from-indigo-500 to-purple-600",
+    "from-teal-500 to-cyan-600",
+    "from-red-500 to-pink-600",
+  ];
+
+  const roleIcons = [
+    "👤",
+    "👑",
+    "🛡️",
+    "✏️",
+    "👁️",
+    "🔧",
+    "📊",
+    "🎯",
+    "⚡",
+    "🌟",
+  ];
+
+  const handleAddNewRole = () => {
+    const newRole = {
+      id: Date.now(), // Generate unique ID
+      name: "",
+      purpose: "",
+      permissions: [],
+      userCount: 0,
+      color: roleColors[Math.floor(Math.random() * roleColors.length)],
+      icon: roleIcons[Math.floor(Math.random() * roleIcons.length)],
+    };
+    setEditingRole(newRole);
+    setIsAdding(true);
+    setShowForm(true);
+  };
+
+  const handleEdit = (role) => {
+    setEditingRole({ ...role });
+    setIsAdding(false);
+    setShowForm(true);
+  };
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    if (!editingRole.name.trim()) {
+      alert("Role name is required!");
+      return;
+    }
+
+    if (isAdding) {
+      // Check if role name already exists
+      if (
+        roles.some(
+          (role) => role.name.toLowerCase() === editingRole.name.toLowerCase()
+        )
+      ) {
+        alert("A role with this name already exists!");
+        return;
+      }
+      // Add new role
+      setRoles([...roles, editingRole]);
+    } else {
+      // Update existing role
+      setRoles(roles.map((r) => (r.id === editingRole.id ? editingRole : r)));
+    }
+
+    setEditingRole(null);
+    setIsAdding(false);
+    setShowForm(false);
+  };
+
+  const handleCancel = () => {
+    setEditingRole(null);
+    setIsAdding(false);
+    setShowForm(false);
+  };
+
+  const togglePermission = (permissionKey) => {
+    if (!editingRole) return;
+
+    const newPermissions = editingRole.permissions.includes(permissionKey)
+      ? editingRole.permissions.filter((p) => p !== permissionKey)
+      : [...editingRole.permissions, permissionKey];
+
+    setEditingRole({ ...editingRole, permissions: newPermissions });
+  };
+
   return (
-    <div className="p-8">
-      <h2 className="text-2xl font-bold mb-4">Roles 🛡️</h2>
-      <p className="text-gray-600">Role management coming soon.</p>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+          🎭 Role Management
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
+          Manage user roles and their associated permissions to control access
+          across your application
+        </p>
+      </div>
+
+      {/* Add Role Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={handleAddNewRole}
+          className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold rounded-2xl shadow-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 flex items-center gap-3"
+        >
+          <span className="text-xl">➕</span>
+          Add New Role
+        </button>
+      </div>
+
+      {/* Roles List */}
+      <div className="grid gap-6">
+        {roles.map((role) => (
+          <div
+            key={role.id}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+          >
+            <div className="flex items-center justify-between p-6">
+              <div className="flex items-center gap-4">
+                <div className="text-3xl">{role.icon || "👤"}</div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200 capitalize">
+                    {role.name}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                    {role.purpose}
+                  </p>
+                  <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+                    {role.userCount} users assigned
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEdit(role)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-200 shadow-md"
+                >
+                  ✏️ Edit
+                </button>
+                {role.name !== "admin" && role.name !== "user" && (
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Are you sure you want to delete the ${role.name} role?`
+                        )
+                      ) {
+                        setRoles(roles.filter((r) => r.id !== role.id));
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all duration-200 shadow-md"
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 pb-6">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                  <span className="text-lg">🔐</span>
+                  Permissions ({role.permissions.length})
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {role.permissions.map((permission) => {
+                    const permInfo = allPermissions.find(
+                      (p) => p.key === permission
+                    );
+                    return (
+                      <span
+                        key={permission}
+                        className="px-3 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900 dark:to-emerald-900 dark:text-green-200 rounded-full text-xs font-medium shadow-sm"
+                        title={permInfo?.description}
+                      >
+                        {permInfo?.icon} {permInfo?.label || permission}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Edit Form */}
+      {showForm && editingRole && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl">{editingRole.icon || "👤"}</span>
+                  <div>
+                    <h3 className="text-2xl font-bold">
+                      {isAdding
+                        ? "Create New Role"
+                        : `Edit Role: ${editingRole.name}`}
+                    </h3>
+                    <p className="text-white/90">
+                      {isAdding
+                        ? "Configure new role permissions and settings"
+                        : "Configure role permissions and settings"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCancel}
+                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all duration-200"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSave} className="p-6 space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Role Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingRole.name}
+                    onChange={(e) =>
+                      setEditingRole({ ...editingRole, name: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-purple-500 focus:outline-none transition-colors"
+                    disabled={
+                      !isAdding &&
+                      (editingRole.name === "admin" ||
+                        editingRole.name === "user")
+                    }
+                    placeholder="Enter role name"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Role Icon
+                  </label>
+                  <input
+                    type="text"
+                    value={editingRole.icon || ""}
+                    onChange={(e) =>
+                      setEditingRole({ ...editingRole, icon: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-purple-500 focus:outline-none transition-colors text-center text-2xl"
+                    placeholder="🎭"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Purpose
+                </label>
+                <textarea
+                  value={editingRole.purpose}
+                  onChange={(e) =>
+                    setEditingRole({ ...editingRole, purpose: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-purple-500 focus:outline-none transition-colors resize-none"
+                  rows="3"
+                  placeholder="Describe the purpose of this role..."
+                />
+              </div>
+
+              {/* Permissions Section */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                  Permissions ({editingRole.permissions.length} selected)
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                  {allPermissions.map((permission) => (
+                    <label
+                      key={permission.key}
+                      className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer hover:shadow-md ${
+                        editingRole.permissions.includes(permission.key)
+                          ? "border-purple-300 bg-purple-50 dark:bg-purple-900/20"
+                          : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-300"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editingRole.permissions.includes(
+                          permission.key
+                        )}
+                        onChange={() => togglePermission(permission.key)}
+                        className="rounded text-purple-600 focus:ring-purple-500 focus:ring-2"
+                      />
+                      <div className="flex items-center gap-3 flex-1">
+                        <span className="text-xl">{permission.icon}</span>
+                        <div>
+                          <div className="font-medium text-gray-800 dark:text-gray-200">
+                            {permission.label}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {permission.description}
+                          </div>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-600">
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
+                >
+                  {isAdding ? "💾 Create Role" : "💾 Save Changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-all duration-300"
+                >
+                  ❌ Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 function PermissionsManager({ user }) {
-  const [canAdd, setCanAdd] = useState(true);
-  const [canEdit, setCanEdit] = useState(true);
-  const [canDelete, setCanDelete] = useState(true);
-  const [canReset, setCanReset] = useState(false);
-  const [userCount, setUserCount] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [permissions, setPermissions] = useState({
+    read_public: {
+      user: true,
+      admin: true,
+      moderator: true,
+      editor: true,
+      viewer: true,
+    },
+    read_own_content: {
+      user: true,
+      admin: true,
+      moderator: true,
+      editor: true,
+      viewer: true,
+    },
+    read_all: {
+      user: false,
+      admin: true,
+      moderator: true,
+      editor: true,
+      viewer: false,
+    },
+    create_content: {
+      user: true,
+      admin: true,
+      moderator: true,
+      editor: true,
+      viewer: false,
+    },
+    edit_own_content: {
+      user: true,
+      admin: true,
+      moderator: true,
+      editor: true,
+      viewer: false,
+    },
+    edit_all: {
+      user: false,
+      admin: true,
+      moderator: true,
+      editor: true,
+      viewer: false,
+    },
+    delete_own_content: {
+      user: true,
+      admin: true,
+      moderator: true,
+      editor: true,
+      viewer: false,
+    },
+    delete_all: {
+      user: false,
+      admin: true,
+      moderator: true,
+      editor: false,
+      viewer: false,
+    },
+    publish_content: {
+      user: false,
+      admin: true,
+      moderator: false,
+      editor: true,
+      viewer: false,
+    },
+    moderate_content: {
+      user: false,
+      admin: true,
+      moderator: true,
+      editor: false,
+      viewer: false,
+    },
+    manage_categories: {
+      user: false,
+      admin: true,
+      moderator: true,
+      editor: false,
+      viewer: false,
+    },
+    manage_users: {
+      user: false,
+      admin: true,
+      moderator: false,
+      editor: false,
+      viewer: false,
+    },
+    manage_roles: {
+      user: false,
+      admin: true,
+      moderator: false,
+      editor: false,
+      viewer: false,
+    },
+    manage_permissions: {
+      user: false,
+      admin: true,
+      moderator: false,
+      editor: false,
+      viewer: false,
+    },
+    system_settings: {
+      user: false,
+      admin: true,
+      moderator: false,
+      editor: false,
+      viewer: false,
+    },
+  });
 
-  // Load permissions from backend
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user && data.user.permissions) {
-          setCanAdd(!!data.user.permissions.canAdd);
-          setCanEdit(!!data.user.permissions.canEdit);
-          setCanDelete(!!data.user.permissions.canDelete);
-          setCanReset(!!data.user.permissions.canReset);
-        }
-      });
-    if (user.role === "admin") {
-      fetch("/api/admin/stats")
-        .then((res) => res.json())
-        .then((data) => setUserCount(data?.users?.length || 0));
-    }
-  }, [user.role]);
+  const permissionCategories = [
+    {
+      name: "Content Access",
+      permissions: ["read_public", "read_own_content", "read_all"],
+    },
+    {
+      name: "Content Management",
+      permissions: [
+        "create_content",
+        "edit_own_content",
+        "edit_all",
+        "delete_own_content",
+        "delete_all",
+        "publish_content",
+      ],
+    },
+    {
+      name: "Moderation",
+      permissions: ["moderate_content", "manage_categories"],
+    },
+    {
+      name: "User Management",
+      permissions: ["manage_users", "manage_roles", "manage_permissions"],
+    },
+    {
+      name: "System",
+      permissions: ["system_settings"],
+    },
+  ];
 
-  // Save permissions to backend
-  const savePermissions = (newPerms) => {
-    setSaving(true);
-    fetch("/api/auth/me", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ permissions: newPerms }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 1500);
-      })
-      .finally(() => setSaving(false));
+  const permissionLabels = {
+    read_public: "Read Public Content",
+    read_own_content: "Read Own Content",
+    read_all: "Read All Content",
+    create_content: "Create Content",
+    edit_own_content: "Edit Own Content",
+    edit_all: "Edit All Content",
+    delete_own_content: "Delete Own Content",
+    delete_all: "Delete All Content",
+    publish_content: "Publish Content",
+    moderate_content: "Moderate Content",
+    manage_categories: "Manage Categories",
+    manage_users: "Manage Users",
+    manage_roles: "Manage Roles",
+    manage_permissions: "Manage Permissions",
+    system_settings: "System Settings",
   };
 
-  const handleToggle = (perm, value) => {
+  const roles = ["user", "admin", "moderator", "editor", "viewer"];
+
+  const savePermissions = (newPerms) => {
+    setPermissions(newPerms);
+    // In a real app, you'd save to backend here
+    console.log("Permissions updated:", newPerms);
+  };
+
+  const handleToggle = (perm, role) => {
     const newPerms = {
-      canAdd,
-      canEdit,
-      canDelete,
-      canReset,
-      [perm]: value,
+      ...permissions,
+      [perm]: {
+        ...permissions[perm],
+        [role]: !permissions[perm][role],
+      },
     };
-    setCanAdd(newPerms.canAdd);
-    setCanEdit(newPerms.canEdit);
-    setCanDelete(newPerms.canDelete);
-    setCanReset(newPerms.canReset);
     savePermissions(newPerms);
   };
 
+  const resetToDefaults = () => {
+    const defaultPermissions = {
+      read_public: {
+        user: true,
+        admin: true,
+        moderator: true,
+        editor: true,
+        viewer: true,
+      },
+      read_own_content: {
+        user: true,
+        admin: true,
+        moderator: true,
+        editor: true,
+        viewer: true,
+      },
+      read_all: {
+        user: false,
+        admin: true,
+        moderator: true,
+        editor: true,
+        viewer: false,
+      },
+      create_content: {
+        user: true,
+        admin: true,
+        moderator: true,
+        editor: true,
+        viewer: false,
+      },
+      edit_own_content: {
+        user: true,
+        admin: true,
+        moderator: true,
+        editor: true,
+        viewer: false,
+      },
+      edit_all: {
+        user: false,
+        admin: true,
+        moderator: true,
+        editor: true,
+        viewer: false,
+      },
+      delete_own_content: {
+        user: true,
+        admin: true,
+        moderator: true,
+        editor: true,
+        viewer: false,
+      },
+      delete_all: {
+        user: false,
+        admin: true,
+        moderator: true,
+        editor: false,
+        viewer: false,
+      },
+      publish_content: {
+        user: false,
+        admin: true,
+        moderator: false,
+        editor: true,
+        viewer: false,
+      },
+      moderate_content: {
+        user: false,
+        admin: true,
+        moderator: true,
+        editor: false,
+        viewer: false,
+      },
+      manage_categories: {
+        user: false,
+        admin: true,
+        moderator: true,
+        editor: false,
+        viewer: false,
+      },
+      manage_users: {
+        user: false,
+        admin: true,
+        moderator: false,
+        editor: false,
+        viewer: false,
+      },
+      manage_roles: {
+        user: false,
+        admin: true,
+        moderator: false,
+        editor: false,
+        viewer: false,
+      },
+      manage_permissions: {
+        user: false,
+        admin: true,
+        moderator: false,
+        editor: false,
+        viewer: false,
+      },
+      system_settings: {
+        user: false,
+        admin: true,
+        moderator: false,
+        editor: false,
+        viewer: false,
+      },
+    };
+    savePermissions(defaultPermissions);
+  };
+
   return (
-    <div className="max-w-xl mx-auto bg-gradient-to-br from-pastel-pink via-pastel-blue to-pastel-yellow dark:from-gray-900 dark:via-purple-900 dark:to-gray-800 rounded-2xl shadow-lg p-8 border border-accent">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-        Permissions
-      </h2>
-      <div className="space-y-4">
-        {user.role === "admin" && (
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-            <div>
-              <div className="font-medium text-gray-700 dark:text-gray-300">
-                Reset All Data
-              </div>
-              <div className="text-sm text-gray-500">
-                Allow resetting all app data (dangerous!)
-              </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+          Permission Management
+        </h2>
+        <button
+          onClick={resetToDefaults}
+          className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all"
+        >
+          Reset to Defaults
+        </button>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* Header */}
+        <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+          <div className="grid grid-cols-6 gap-4 items-center">
+            <div className="col-span-2">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-200">
+                Permission
+              </h3>
             </div>
-            <label className="inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={canReset}
-                disabled={saving}
-                onChange={(e) => handleToggle("canReset", e.target.checked)}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent rounded-full peer dark:bg-gray-700 peer-checked:bg-red-400 dark:peer-checked:bg-red-500 transition-all"></div>
-              <span className="ml-2 text-gray-600 dark:text-gray-400">
-                {canReset ? "On" : "Off"}
-              </span>
-            </label>
+            {roles.map((role) => (
+              <div key={role} className="text-center">
+                <span className="font-medium text-gray-700 dark:text-gray-300 capitalize text-sm">
+                  {role}
+                </span>
+              </div>
+            ))}
           </div>
-        )}
-        <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <div className="font-medium text-gray-700 dark:text-gray-300">
-              Add Task
-            </div>
-            <div className="text-sm text-gray-500">Allow adding new tasks</div>
-          </div>
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={canAdd}
-              disabled={saving}
-              onChange={(e) => handleToggle("canAdd", e.target.checked)}
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent rounded-full peer dark:bg-gray-700 peer-checked:bg-accent peer-checked:bg-accent/20 transition-all"></div>
-            <span className="ml-2 text-gray-600 dark:text-gray-400">
-              {canAdd ? "On" : "Off"}
-            </span>
-          </label>
         </div>
-        <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <div className="font-medium text-gray-700 dark:text-gray-300">
-              Edit Task
+
+        {/* Permission Categories */}
+        {permissionCategories.map((category) => (
+          <div key={category.name}>
+            <div className="bg-gray-100 dark:bg-gray-600 px-6 py-2">
+              <h4 className="font-medium text-gray-700 dark:text-gray-300 text-sm">
+                {category.name}
+              </h4>
             </div>
-            <div className="text-sm text-gray-500">Allow editing tasks</div>
-          </div>
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={canEdit}
-              disabled={saving}
-              onChange={(e) => handleToggle("canEdit", e.target.checked)}
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent rounded-full peer dark:bg-gray-700 peer-checked:bg-accent peer-checked:bg-accent/20 transition-all"></div>
-            <span className="ml-2 text-gray-600 dark:text-gray-400">
-              {canEdit ? "On" : "Off"}
-            </span>
-          </label>
-        </div>
-        <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <div className="font-medium text-gray-700 dark:text-gray-300">
-              Delete Task
-            </div>
-            <div className="text-sm text-gray-500">Allow deleting tasks</div>
-          </div>
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={canDelete}
-              disabled={saving}
-              onChange={(e) => handleToggle("canDelete", e.target.checked)}
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent rounded-full peer dark:bg-gray-700 peer-checked:bg-accent peer-checked:bg-accent/20 transition-all"></div>
-            <span className="ml-2 text-gray-600 dark:text-gray-400">
-              {canDelete ? "On" : "Off"}
-            </span>
-          </label>
-        </div>
-        {user.role === "admin" && (
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <div className="font-medium text-gray-700 dark:text-gray-300">
-                Users Logged In
+            {category.permissions.map((permission) => (
+              <div
+                key={permission}
+                className="px-6 py-4 border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="grid grid-cols-6 gap-4 items-center">
+                  <div className="col-span-2">
+                    <div className="font-medium text-gray-800 dark:text-gray-200">
+                      {permissionLabels[permission]}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {permission}
+                    </div>
+                  </div>
+                  {roles.map((role) => (
+                    <div key={role} className="text-center">
+                      <label className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={permissions[permission][role]}
+                          onChange={() => handleToggle(permission, role)}
+                          className="rounded text-accent focus:ring-accent"
+                          disabled={user.role !== "admin"}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="text-sm text-gray-500">
-                Number of users who have logged in yet
-              </div>
-            </div>
-            <span className="text-lg font-bold text-accent dark:text-accent">
-              {userCount !== null ? userCount : "..."}
-            </span>
+            ))}
           </div>
-        )}
-        {success && (
-          <div className="text-green-500 font-medium text-center">Saved!</div>
-        )}
+        ))}
+      </div>
+
+      {/* Summary */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+        <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+          Role Summary
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
+          {roles.map((role) => {
+            const rolePermissions = Object.values(permissions).filter(
+              (perm) => perm[role]
+            ).length;
+            const totalPermissions = Object.keys(permissions).length;
+            return (
+              <div key={role} className="text-center">
+                <div className="font-medium text-gray-700 dark:text-gray-300 capitalize">
+                  {role}
+                </div>
+                <div className="text-gray-500 dark:text-gray-400">
+                  {rolePermissions}/{totalPermissions} permissions
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
 // Add ProjectManager component
-function ProjectManager() {
-  const [projects, setProjects] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("projects");
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  });
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    color: "#3b82f6",
-    icon: "📁",
-    files: [], // store file metadata
-  });
-  const [isSaving, setIsSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const colorOptions = [
-    "#3b82f6",
-    "#ec4899",
-    "#a855f7",
-    "#10b981",
-    "#f59e42",
-    "#fbbf24",
-    "#ef4444",
-    "#6366f1",
-    "#14b8a6",
-  ];
-  const iconOptions = [
-    "📁",
-    "📝",
-    "💼",
-    "🎯",
-    "⭐",
-    "💡",
-    "🎨",
-    "🏠",
-    "🚗",
-    "🍕",
-    "☕",
-    "💻",
-    "📱",
-    "🎵",
-    "🎬",
-    "🏃‍♀️",
-    "🧘‍♀️",
-    "📖",
-    "✏️",
-    "🎓",
-    "🛒",
-    "🏥",
-  ];
-
-  // Handle file input
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    const fileObjs = files.map((file) => ({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      url: URL.createObjectURL(file),
-    }));
-    setForm((prev) => ({ ...prev, files: [...prev.files, ...fileObjs] }));
-  };
-
-  const handleRemoveFile = (idx) => {
-    setForm((prev) => ({
-      ...prev,
-      files: prev.files.filter((_, i) => i !== idx),
-    }));
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) return;
-    setIsSaving(true);
-    const newProjects = [...projects, { ...form, id: Date.now() }];
-    setProjects(newProjects);
-    localStorage.setItem("projects", JSON.stringify(newProjects));
-    setForm({
-      name: "",
-      description: "",
-      color: "#3b82f6",
-      icon: "📁",
-      files: [],
-    });
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 1200);
-    setIsSaving(false);
-  };
-
-  // File icon by type
-  const getFileIcon = (type, name) => {
-    if (type.includes("pdf")) return "📄";
-    if (type.includes("spreadsheet") || name.match(/\.(xls|xlsx|csv)$/i))
-      return "📊";
-    if (type.includes("word") || name.match(/\.(doc|docx)$/i)) return "📝";
-    if (type.includes("image")) return "🖼️";
-    if (type.includes("zip") || name.match(/\.(zip|rar|7z)$/i)) return "🗜️";
-    return "📎";
-  };
-
-  return (
-    <div className="max-w-2xl mx-auto bg-white/80 dark:bg-gray-900/80 rounded-2xl shadow-lg p-8 space-y-8 border border-accent">
-      <h2 className="text-2xl font-bold text-accent mb-6 flex items-center gap-2">
-        {form.icon} Projects
-      </h2>
-      <form onSubmit={handleSave} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Project Name
-          </label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full px-4 py-3 border border-accent rounded-lg focus:ring-2 ring-accent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            placeholder="Enter project name"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Description
-          </label>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={2}
-            className="w-full px-4 py-3 border border-accent rounded-lg focus:ring-2 ring-accent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            placeholder="Describe your project (optional)"
-          />
-        </div>
-        <div className="flex items-center gap-4 flex-wrap">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Color
-            </label>
-            <div className="flex gap-1">
-              {colorOptions.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={`w-7 h-7 rounded-full border-2 transition-all ${
-                    form.color === color
-                      ? "border-accent scale-110"
-                      : "border-gray-200 dark:border-gray-700 hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setForm((f) => ({ ...f, color }))}
-                  aria-label={`Color ${color}`}
-                />
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Icon
-            </label>
-            <div className="flex gap-1 flex-wrap max-w-xs">
-              {iconOptions.map((icon) => (
-                <button
-                  key={icon}
-                  type="button"
-                  className={`w-7 h-7 rounded-lg border-2 text-lg transition-all ${
-                    form.icon === icon
-                      ? "border-accent bg-accent/10"
-                      : "border-gray-200 dark:border-gray-700 hover:border-accent"
-                  }`}
-                  onClick={() => setForm((f) => ({ ...f, icon }))}
-                  aria-label={`Icon ${icon}`}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Attach Files
-            </label>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.xls,.xlsx,.csv,.doc,.docx,.ppt,.pptx,.txt,image/*,application/zip,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.ms-excel,application/vnd.ms-powerpoint"
-              onChange={handleFileChange}
-              className="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent file:text-white hover:file:bg-accent/90"
-            />
-            {form.files.length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {form.files.map((file, idx) => (
-                  <li
-                    key={idx}
-                    className="flex items-center gap-2 text-sm bg-white/60 dark:bg-gray-800/60 rounded px-2 py-1 border border-accent"
-                  >
-                    <span>{getFileIcon(file.type, file.name)}</span>
-                    <a
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="truncate text-accent underline"
-                      download={file.name}
-                    >
-                      {file.name}
-                    </a>
-                    <span className="text-xs text-gray-400">
-                      ({(file.size / 1024).toFixed(1)} KB)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFile(idx)}
-                      className="ml-2 text-gray-400 hover:text-red-500"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-        <div className="flex justify-end mt-4">
-          <button
-            type="submit"
-            disabled={isSaving || !form.name.trim()}
-            className="px-6 py-2 rounded-lg font-semibold shadow bg-accent text-white transition-all duration-200 focus:outline-none focus:ring-2 ring-accent disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-          >
-            {success ? "Saved!" : "Save Project"}
-          </button>
-        </div>
-      </form>
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 mt-8">
-          Your Projects ({projects.length})
-        </h3>
-        {projects.length === 0 ? (
-          <div className="text-center py-8 bg-white/60 dark:bg-gray-700/60 rounded-xl border border-accent">
-            <span className="text-4xl mb-4 block">📁</span>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              No projects yet. Add your first project to get started!
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {projects.map((proj) => (
-              <li
-                key={proj.id}
-                className="flex flex-col gap-2 bg-white/70 dark:bg-gray-800/70 border border-accent rounded-lg px-4 py-3 shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl" style={{ color: proj.color }}>
-                    {proj.icon}
-                  </span>
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-900 dark:text-white">
-                      {proj.name}
-                    </div>
-                    {proj.description && (
-                      <div className="text-xs text-gray-500 dark:text-gray-300">
-                        {proj.description}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {proj.files && proj.files.length > 0 && (
-                  <ul className="flex flex-wrap gap-2 mt-1">
-                    {proj.files.map((file, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-center gap-1 text-xs bg-white/60 dark:bg-gray-800/60 rounded px-2 py-1 border border-accent"
-                      >
-                        <span>{getFileIcon(file.type, file.name)}</span>
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="truncate text-accent underline"
-                          download={file.name}
-                        >
-                          {file.name}
-                        </a>
-                        <span className="text-gray-400">
-                          ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
+// ProjectManager component is now imported from ./ProjectManager.js
 
 // Add TemplateDetailPanel component
 function TemplateDetailPanel({ template, onBack, onSaveProject }) {
@@ -2059,6 +2481,7 @@ export default function UnifiedDashboard({
   user = { avatar: null, role: "user" },
   onLogout,
 }) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -2078,6 +2501,7 @@ export default function UnifiedDashboard({
       key: "projects",
       label: "Projects",
       icon: "📁",
+      isDropdown: true,
       children: [
         { key: "project-categories", label: "Project Categories", icon: "🏷️" },
         { key: "project-list", label: "Projects", icon: "📋" },
@@ -2090,6 +2514,7 @@ export default function UnifiedDashboard({
       label: "User Management",
       icon: "👥",
       adminOnly: true,
+      isDropdown: true,
       children: [
         { key: "users", label: "Users", icon: "👤" },
         { key: "roles", label: "Roles", icon: "🛡️" },
@@ -2098,26 +2523,55 @@ export default function UnifiedDashboard({
     },
   ];
 
+  // Track open dropdowns
+  const [openDropdowns, setOpenDropdowns] = useState({});
+  useEffect(() => {
+    // Open the dropdown if a child is active
+    nav.forEach((item) => {
+      if (item.children && item.children.some((c) => c.key === activeSection)) {
+        setOpenDropdowns((prev) => ({ ...prev, [item.key]: true }));
+      }
+    });
+    // eslint-disable-next-line
+  }, [activeSection]);
+
   // Helper to render sidebar items
   const renderNav = (items, parent = null) => (
     <ul className="space-y-1">
       {items.map((item) => {
         if (item.adminOnly && user.role !== "admin") return null;
         const isActive = activeSection === item.key;
+        const isDropdown = item.isDropdown;
+        const isOpen = openDropdowns[item.key];
         return (
           <li key={item.key}>
             <button
               className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
-                isActive
+                isActive || (isDropdown && isOpen)
                   ? "bg-accent/20 text-accent"
                   : "text-gray-200 hover:bg-accent/10 hover:text-accent"
               }`}
-              onClick={() => setActiveSection(item.key)}
+              onClick={() => {
+                if (isDropdown) {
+                  setOpenDropdowns((prev) => ({
+                    ...prev,
+                    [item.key]: !prev[item.key],
+                  }));
+                } else if (item.key === "templates") {
+                  // Navigate to the templates page
+                  router.push("/templates");
+                } else {
+                  setActiveSection(item.key);
+                }
+              }}
             >
               <span className="text-lg">{item.icon}</span>
               <span>{item.label}</span>
+              {isDropdown && (
+                <span className="ml-auto text-xs">{isOpen ? "▲" : "▼"}</span>
+              )}
             </button>
-            {item.children && (
+            {isDropdown && isOpen && item.children && (
               <div className="ml-4 mt-1 border-l border-accent pl-2">
                 {renderNav(item.children, item.key)}
               </div>
@@ -2194,58 +2648,28 @@ export default function UnifiedDashboard({
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800 relative">
       {/* Sidebar */}
-      <div
-        className={`fixed z-40 inset-y-0 left-0 w-72 bg-gray-900/90 border-r border-accent shadow-xl transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto flex flex-col ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        <div className="flex items-center justify-between p-6 border-b border-accent">
-          <span className="text-xl font-bold text-accent tracking-wide">
-            Productivity
+      <aside className="flex flex-col h-screen w-64 border-r shadow-xl bg-white/90 border-gray-200 dark:bg-[#181c2a] dark:border-gray-800 transition-colors duration-300">
+        {/* Logo/Header */}
+        <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-800 justify-between transition-colors duration-300">
+          <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-wide">
+            Dashboard
           </span>
-          <button
-            className="lg:hidden text-gray-400 hover:text-accent"
-            onClick={() => setSidebarOpen(false)}
-          >
-            ×
-          </button>
         </div>
-        <nav className="flex-1 py-4 overflow-y-auto">
-          <div className="text-xs uppercase text-gray-400 px-4 mb-2">
-            Navigation
-          </div>
-          {renderNav(nav)}
-        </nav>
-        <div className="p-4 border-t border-accent">
+        {/* Navigation */}
+        <nav className="flex-1 py-4 overflow-y-auto">{renderNav(nav)}</nav>
+        {/* Logout Button */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 transition-colors duration-300">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:opacity-90 transition-all duration-200 shadow-md hover:shadow-lg"
+            className="w-full flex items-center gap-2 px-4 py-2 bg-pastel-pink text-gray-900 rounded-lg hover:bg-pastel-blue transition-all duration-200 shadow-md hover:shadow-lg font-bold"
           >
-            <span>🚪</span> Logout
+            <span className="bg-gray-900 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
+              {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+            </span>
+            Logout
           </button>
         </div>
-      </div>
-      {/* Sidebar overlay for mobile */}
-      {!sidebarOpen && (
-        <button
-          className="fixed z-50 top-4 left-4 lg:hidden p-2 rounded-lg bg-accent text-white shadow-lg"
-          onClick={() => setSidebarOpen(true)}
-        >
-          ☰
-        </button>
-      )}
-      {/* Profile Button (top right) */}
-      <button
-        className="fixed top-6 right-28 z-50 flex items-center justify-center w-12 h-12 rounded-full border-2 border-accent bg-white shadow-lg hover:shadow-xl transition-all duration-200 focus:outline-none"
-        onClick={() => setActiveSection("settings")}
-        title="Profile & Settings"
-      >
-        <img
-          src={profileAvatar || user.avatar || "/default-avatar.png"}
-          alt="Profile"
-          className="w-10 h-10 rounded-full object-cover"
-        />
-      </button>
+      </aside>
       {/* Main Content */}
       <main className="flex-1 p-6 lg:p-10 overflow-y-auto relative">
         {activeSection === "settings" ? (
@@ -2326,10 +2750,12 @@ export default function UnifiedDashboard({
             ))}
           </div>
           {/* Tool Content */}
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-4">
             {toolTabs.find((tab) => tab.key === activeTool)?.component}
           </div>
         </div>
+        {/* AI Chat Bot */}
+        <AIChatBot />
       </main>
     </div>
   );

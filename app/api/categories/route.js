@@ -1,46 +1,31 @@
 import { NextResponse } from "next/server";
-import {
-  connectDB,
-  getCategories,
-  addCategory,
-  findCategoriesByUser,
-  getAllCategories,
-} from "@/lib/db";
 import { verifyToken } from "@/lib/auth";
+
+// Simple in-memory categories storage
+let categories = [];
 
 // GET - Fetch categories (users see their own, admins see all)
 export async function GET(request) {
   try {
-    await connectDB();
-
     const token = request.cookies.get("token")?.value;
-    console.log("Categories API - Token:", token ? "Present" : "Missing");
-
     if (!token) {
-      console.log("Categories API - No token provided");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
-    console.log(
-      "Categories API - Token decoded:",
-      decoded ? "Success" : "Failed"
-    );
-
     if (!decoded) {
-      console.log("Categories API - Invalid token");
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    let categories;
-    if (decoded.role === "admin") {
-      categories = getAllCategories();
-    } else {
-      categories = findCategoriesByUser(decoded.userId);
+    // Get categories based on role
+    let userCategories = categories;
+    if (decoded.role !== "admin") {
+      userCategories = categories.filter(
+        (category) => category.user === decoded.userId
+      );
     }
 
-    console.log("Categories API - Returning categories:", categories.length);
-    return NextResponse.json({ categories });
+    return NextResponse.json({ categories: userCategories });
   } catch (error) {
     console.error("Get categories error:", error);
     return NextResponse.json(
@@ -53,8 +38,6 @@ export async function GET(request) {
 // POST - Create a new category
 export async function POST(request) {
   try {
-    await connectDB();
-
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -76,10 +59,13 @@ export async function POST(request) {
     }
 
     // Create new category
-    const category = addCategory({
+    const category = {
       ...categoryData,
+      _id: Date.now().toString(),
       user: decoded.userId,
-    });
+    };
+
+    categories.push(category);
 
     return NextResponse.json(
       { message: "Category created successfully", category },

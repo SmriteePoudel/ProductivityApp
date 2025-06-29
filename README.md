@@ -59,8 +59,11 @@ A modern, full-stack task management and productivity application built with Nex
    ```env
    MONGODB_URI=mongodb://localhost:27017/productivity-app
    JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
    NODE_ENV=development
    ```
+
+   **Note**: For AI Chat functionality, you'll need to get an API key from [OpenRouter](https://openrouter.ai/keys). The AI chat uses Claude 3 Haiku model for productivity assistance.
 
 4. **Set up MongoDB**
 

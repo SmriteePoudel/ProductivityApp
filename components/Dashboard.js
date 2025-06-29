@@ -23,19 +23,17 @@ export default function Dashboard({
 
   const fetchDashboardData = async () => {
     try {
-      const [statsResponse, tasksResponse] = await Promise.all([
-        fetch("/api/tasks/stats"),
-        fetch("/api/tasks?limit=5"),
-      ]);
+      setIsLoading(true);
 
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats(statsData);
-      }
+      // Use the new batched API endpoint for better performance
+      const response = await fetch("/api/dashboard?limit=5");
 
-      if (tasksResponse.ok) {
-        const tasksData = await tasksResponse.json();
-        setRecentTasks(tasksData.tasks || []);
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data.stats);
+        setRecentTasks(data.recentTasks || []);
+      } else {
+        console.error("Failed to fetch dashboard data");
       }
     } catch (error) {
       console.error("Dashboard data fetch error:", error);
@@ -198,68 +196,55 @@ export default function Dashboard({
             href="#"
             className="text-accent hover:text-pastel-pink text-sm font-medium"
           >
-            View All →
+            View All
           </a>
         </div>
-
-        {recentTasks.length === 0 ? (
-          <div className="text-center py-8">
-            <span className="text-4xl mb-4 block">🌸</span>
-            <p className="text-gray-500 dark:text-gray-400">
-              No tasks yet. Create your first task to get started!
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {recentTasks.map((task) => (
+        <div className="space-y-3">
+          {recentTasks.length === 0 ? (
+            <div className="text-center py-8">
+              <span className="text-4xl mb-2 block">🌸</span>
+              <p className="text-gray-500 dark:text-gray-400">
+                No tasks yet. Create your first task to get started!
+              </p>
+            </div>
+          ) : (
+            recentTasks.map((task) => (
               <div
                 key={task._id}
-                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600"
+                className="bg-white/60 dark:bg-gray-700/60 rounded-lg p-4 border border-pink-100 dark:border-purple-600 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={task.status === "completed"}
-                    className="w-4 h-4 text-pink-400 bg-gray-100 border-gray-300 rounded focus:ring-pink-200"
-                    readOnly
-                  />
-                  <div>
-                    <h3
-                      className={`font-medium ${
-                        task.status === "completed"
-                          ? "line-through text-gray-500"
-                          : "text-gray-900 dark:text-white"
-                      }`}
-                    >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-1">
                       {task.title}
                     </h3>
-                    {task.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {task.description}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                          task.status
+                        )}`}
+                      >
+                        {task.status}
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                          task.priority
+                        )}`}
+                      >
+                        {task.priority}
+                      </span>
+                      {task.dueDate && (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Due: {new Date(task.dueDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(
-                      task.priority
-                    )}`}
-                  >
-                    {task.priority}
-                  </span>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                      task.status
-                    )}`}
-                  >
-                    {task.status}
-                  </span>
-                </div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

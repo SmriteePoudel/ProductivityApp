@@ -4,7 +4,11 @@ import { generateToken, hashPassword } from "@/lib/auth";
 
 export async function POST(request) {
   try {
-    await connectDB();
+    const dbConnected = await connectDB();
+    console.log(
+      "[REGISTER] DB Connected:",
+      dbConnected ? "MongoDB" : "In-memory DB"
+    );
 
     const { name, email, password, role = "user" } = await request.json();
 
@@ -16,8 +20,19 @@ export async function POST(request) {
       );
     }
 
+    // Validate password length
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters long" },
+        { status: 400 }
+      );
+    }
+
     // Validate role
-    if (role && !["user", "admin"].includes(role)) {
+    if (
+      role &&
+      !["user", "admin", "moderator", "editor", "viewer"].includes(role)
+    ) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
@@ -31,18 +46,47 @@ export async function POST(request) {
     }
 
     // Hash password
-    const hashedPassword = await hashPassword(password);
+    let hashedPassword;
+    try {
+      hashedPassword = await hashPassword(password);
+      console.log(`[REGISTER] Password hashed for ${email}`);
+    } catch (err) {
+      console.error("[REGISTER] Password hashing failed:", err);
+      return NextResponse.json(
+        { error: "Password hashing failed" },
+        { status: 500 }
+      );
+    }
 
     // Create user
-    const user = addUser({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-    });
+    let user;
+    try {
+      user = addUser({
+        name,
+        email,
+        password: hashedPassword, // Save only the hashed password
+        role,
+      });
+      console.log(`[REGISTER] User created: ${user.email}, role: ${user.role}`);
+    } catch (err) {
+      console.error("[REGISTER] User creation failed:", err);
+      return NextResponse.json(
+        { error: "User creation failed", details: String(err) },
+        { status: 500 }
+      );
+    }
 
     // Generate JWT token
-    const token = generateToken(user);
+    let token;
+    try {
+      token = generateToken(user);
+    } catch (err) {
+      console.error("[REGISTER] Token generation failed:", err);
+      return NextResponse.json(
+        { error: "Token generation failed" },
+        { status: 500 }
+      );
+    }
 
     // Create response
     const response = NextResponse.json(
@@ -68,9 +112,13 @@ export async function POST(request) {
 
     return response;
   } catch (error) {
-    console.error("Register error:", error);
+    console.error("[REGISTER] Internal server error:", error, error?.stack);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "Internal server error",
+        details: String(error),
+        stack: error?.stack,
+      },
       { status: 500 }
     );
   }

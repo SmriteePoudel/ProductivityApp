@@ -1,106 +1,166 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Calendar from "./Calendar";
-import Clock from "./Clock";
-import Timer from "./Timer";
-import Pomodoro from "./Pomodoro";
-import Reminders from "./Reminders";
-import EditableContent from "./EditableContent";
 
-export default function Sidebar({ isOpen, onClose }) {
-  const [activeTab, setActiveTab] = useState("calendar");
+export default function Sidebar() {
+  const [openProjects, setOpenProjects] = useState(true);
+  const [active, setActive] = useState("dashboard");
+  const [isDark, setIsDark] = useState(false);
 
-  const tabs = [
-    { id: "calendar", label: "Calendar", icon: "📅" },
-    { id: "clock", label: "Clock", icon: "🕐" },
-    { id: "timer", label: "Timer", icon: "⏱️" },
-    { id: "pomodoro", label: "Pomodoro", icon: "🍅" },
-  ];
+  // Sync theme on mount and when toggled
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("appearance");
+      const systemDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      if (stored === "dark" || (!stored && systemDark)) {
+        document.documentElement.classList.add("dark");
+        setIsDark(true);
+      } else {
+        document.documentElement.classList.remove("dark");
+        setIsDark(false);
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (typeof window !== "undefined") {
+      const currentlyDark = document.documentElement.classList.contains("dark");
+      if (currentlyDark) {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("appearance", "light");
+        setIsDark(false);
+      } else {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("appearance", "dark");
+        setIsDark(true);
+      }
+    }
+  };
 
   return (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`fixed top-0 left-0 h-full w-80 bg-gradient-to-br from-pastel-pink via-pastel-blue to-pastel-yellow dark:from-gray-900 dark:via-purple-900 dark:to-gray-800 backdrop-blur-md border-r border-accent shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 lg:static lg:z-auto flex flex-col`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-accent bg-gradient-to-r from-pastel-pink to-pastel-blue">
-          <h2 className="text-xl font-bold gradient-text">Tools ✨</h2>
-          <button
-            onClick={onClose}
-            className="lg:hidden text-gray-400 hover:text-accent transition-colors"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-accent bg-gradient-to-r from-pastel-yellow to-pastel-blue">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3 px-2 text-sm font-medium transition-colors rounded-t-lg ${
-                activeTab === tab.id
-                  ? "bg-pastel-blue text-accent border-b-2 border-accent shadow"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-pastel-pink hover:text-accent"
-              }`}
-            >
-              <span className="text-lg">{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Tools Content Area - Fixed Height with Scroll */}
-        <div className="flex-1 flex flex-col">
-          {/* Tools Display Area */}
-          <div className="flex-1 p-4">
-            <div className={`${activeTab === "calendar" ? "block" : "hidden"}`}>
-              <Calendar />
-            </div>
-            <div className={`${activeTab === "clock" ? "block" : "hidden"}`}>
-              <Clock />
-            </div>
-            <div className={`${activeTab === "timer" ? "block" : "hidden"}`}>
-              <Timer />
-            </div>
-            <div className={`${activeTab === "pomodoro" ? "block" : "hidden"}`}>
-              <Pomodoro />
-            </div>
-          </div>
-
-          {/* Scrollable Content Area Below Tools */}
-          <div className="border-t border-accent bg-pastel-yellow/60">
-            <div className="p-3 bg-pastel-pink border-b border-accent">
-              <h3 className="text-sm font-medium text-accent mb-2">
-                📋 Personal Content
-              </h3>
-            </div>
-            <div className="h-64 overflow-y-auto sidebar-scrollbar">
-              <div className="p-4">
-                <EditableContent />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Reminders Section - Bottom of Sidebar */}
-        <div className="border-t border-accent p-4 bg-pastel-blue/40">
-          <Reminders />
-        </div>
+    <aside className="flex flex-col h-screen w-64 border-r shadow-xl bg-white/90 border-gray-200 dark:bg-[#181c2a] dark:border-gray-800 transition-colors duration-300">
+      {/* Logo/Header */}
+      <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-800 justify-between transition-colors duration-300">
+        <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-wide">
+          Dashboard
+        </span>
+        <button
+          onClick={toggleTheme}
+          className="ml-2 p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-yellow-500 dark:text-yellow-300"
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDark ? (
+            <span role="img" aria-label="Light mode">
+              🌞
+            </span>
+          ) : (
+            <span role="img" aria-label="Dark mode">
+              🌙
+            </span>
+          )}
+        </button>
       </div>
-    </>
+      {/* Navigation */}
+      <nav className="flex-1 py-4 overflow-y-auto">
+        <ul className="space-y-1">
+          <li>
+            <button
+              className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                active === "dashboard"
+                  ? "bg-accent/20 text-accent"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-accent/10 hover:text-accent"
+              }`}
+              onClick={() => setActive("dashboard")}
+            >
+              <span className="text-lg">🏠</span>
+              <span>Dashboard</span>
+            </button>
+          </li>
+          <li>
+            <button
+              className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                openProjects
+                  ? "bg-accent/20 text-accent"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-accent/10 hover:text-accent"
+              }`}
+              onClick={() => setOpenProjects((v) => !v)}
+            >
+              <span className="text-lg">📁</span>
+              <span>Projects</span>
+              <span className="ml-auto text-xs">
+                {openProjects ? "▲" : "▼"}
+              </span>
+            </button>
+            {openProjects && (
+              <ul className="ml-4 mt-1 border-l border-accent pl-2 space-y-1">
+                <li>
+                  <button
+                    className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                      active === "project-categories"
+                        ? "bg-accent/20 text-accent"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-accent/10 hover:text-accent"
+                    }`}
+                    onClick={() => setActive("project-categories")}
+                  >
+                    <span className="text-lg">🏷️</span>
+                    <span>Project Categories</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                      active === "projects"
+                        ? "bg-accent/20 text-accent"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-accent/10 hover:text-accent"
+                    }`}
+                    onClick={() => setActive("projects")}
+                  >
+                    <span className="text-lg">📋</span>
+                    <span>Projects</span>
+                  </button>
+                </li>
+              </ul>
+            )}
+          </li>
+          <li>
+            <button
+              className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                active === "templates"
+                  ? "bg-accent/20 text-accent"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-accent/10 hover:text-accent"
+              }`}
+              onClick={() => setActive("templates")}
+            >
+              <span className="text-lg">🗂️</span>
+              <span>Templates</span>
+            </button>
+          </li>
+          <li>
+            <button
+              className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                active === "settings"
+                  ? "bg-accent/20 text-accent"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-accent/10 hover:text-accent"
+              }`}
+              onClick={() => setActive("settings")}
+            >
+              <span className="text-lg">⚙️</span>
+              <span>Settings</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+      {/* Logout Button */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 transition-colors duration-300">
+        <button className="w-full flex items-center gap-2 px-4 py-2 bg-pastel-pink text-gray-900 rounded-lg hover:bg-pastel-blue transition-all duration-200 shadow-md hover:shadow-lg font-bold">
+          <span className="bg-gray-900 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
+            N
+          </span>
+          Logout
+        </button>
+      </div>
+    </aside>
   );
 }

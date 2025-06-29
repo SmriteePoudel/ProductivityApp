@@ -1,19 +1,36 @@
 import { NextResponse } from "next/server";
-import { connectDB, resetAllData } from "@/lib/db";
+import { resetAllData, resetAdminPassword } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
-export const POST = requireAdmin(async (request) => {
+// POST - Reset all data and admin password
+export async function POST(request) {
   try {
-    await connectDB();
+    const handler = async (req, user) => {
+      console.log("🔄 Admin reset requested by:", user.email);
 
-    const result = resetAllData();
+      // Reset admin password first
+      const passwordReset = await resetAdminPassword();
+      console.log("Password reset result:", passwordReset);
 
-    return NextResponse.json(result, { status: 200 });
+      // Then reset all data
+      const result = resetAllData();
+      console.log("Data reset result:", result);
+
+      return NextResponse.json({
+        message: "All data and admin password have been reset successfully",
+        adminCredentials: {
+          email: "admin@example.com",
+          password: "admin123",
+        },
+      });
+    };
+
+    return await requireAdmin(handler)(request);
   } catch (error) {
-    console.error("Reset data error:", error);
+    console.error("Admin reset error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-});
+}

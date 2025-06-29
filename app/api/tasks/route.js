@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
-import {
-  connectDB,
-  getTasks,
-  addTask,
-  findTasksByUser,
-  getAllTasks,
-} from "@/lib/db";
 import { verifyToken } from "@/lib/auth";
+
+// Simple in-memory tasks storage
+let tasks = [];
 
 // GET - Fetch tasks (users see their own, admins see all)
 export async function GET(request) {
   try {
-    await connectDB();
-
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -31,26 +25,32 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get("limit")) || 10;
 
     // Get tasks based on role
-    let tasks;
-    if (decoded.role === "admin") {
-      tasks = getAllTasks();
-    } else {
-      tasks = findTasksByUser(decoded.userId);
+    let userTasks = tasks;
+    if (decoded.role !== "admin") {
+      userTasks = tasks.filter((task) => task.user === decoded.userId);
     }
 
-    // Apply filters
-    if (status) tasks = tasks.filter((task) => task.status === status);
-    if (priority) tasks = tasks.filter((task) => task.priority === priority);
-    if (category) tasks = tasks.filter((task) => task.category === category);
+    // Apply filters efficiently
+    if (status) {
+      userTasks = userTasks.filter((task) => task.status === status);
+    }
+    if (priority) {
+      userTasks = userTasks.filter((task) => task.priority === priority);
+    }
+    if (category) {
+      userTasks = userTasks.filter((task) => task.category === category);
+    }
 
-    // Sort by creation date (newest first)
-    tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Sort by creation date (newest first) - only if needed
+    if (userTasks.length > 0) {
+      userTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
 
     // Apply pagination
-    const total = tasks.length;
+    const total = userTasks.length;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
-    const paginatedTasks = tasks.slice(startIndex, endIndex);
+    const paginatedTasks = userTasks.slice(startIndex, endIndex);
 
     return NextResponse.json({
       tasks: paginatedTasks,
@@ -73,8 +73,6 @@ export async function GET(request) {
 // POST - Create a new task
 export async function POST(request) {
   try {
-    await connectDB();
-
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -96,10 +94,14 @@ export async function POST(request) {
     }
 
     // Create new task
-    const task = addTask({
+    const task = {
       ...taskData,
+      _id: Date.now().toString(),
       user: decoded.userId,
-    });
+      createdAt: new Date(),
+    };
+
+    tasks.push(task);
 
     return NextResponse.json(
       { message: "Task created successfully", task },
