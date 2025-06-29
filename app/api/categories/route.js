@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
-
-// Simple in-memory categories storage
-let categories = [];
+import {
+  connectDB,
+  addCategory,
+  findCategoriesByUser,
+  getAllCategories,
+} from "@/lib/db.js";
+import { verifyToken } from "@/lib/auth.js";
 
 // GET - Fetch categories (users see their own, admins see all)
 export async function GET(request) {
   try {
+    await connectDB();
+
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,12 +22,12 @@ export async function GET(request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // Get categories based on role
-    let userCategories = categories;
-    if (decoded.role !== "admin") {
-      userCategories = categories.filter(
-        (category) => category.user === decoded.userId
-      );
+    // Get categories based on role (now async)
+    let userCategories;
+    if (decoded.role === "admin") {
+      userCategories = await getAllCategories();
+    } else {
+      userCategories = await findCategoriesByUser(decoded.userId);
     }
 
     return NextResponse.json({ categories: userCategories });
@@ -38,6 +43,8 @@ export async function GET(request) {
 // POST - Create a new category
 export async function POST(request) {
   try {
+    await connectDB();
+
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -58,14 +65,11 @@ export async function POST(request) {
       );
     }
 
-    // Create new category
-    const category = {
+    // Create new category with user ID (now async)
+    const category = await addCategory({
       ...categoryData,
-      _id: Date.now().toString(),
       user: decoded.userId,
-    };
-
-    categories.push(category);
+    });
 
     return NextResponse.json(
       { message: "Category created successfully", category },

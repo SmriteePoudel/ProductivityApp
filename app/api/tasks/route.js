@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
-
-// Simple in-memory tasks storage
-let tasks = [];
+import {
+  connectDB,
+  addTask,
+  findTasksByUser,
+  getAllTasks,
+  updateTask,
+  deleteTask,
+} from "@/lib/db.js";
+import { verifyToken } from "@/lib/auth.js";
 
 // GET - Fetch tasks (users see their own, admins see all)
 export async function GET(request) {
   try {
+    await connectDB();
+
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,10 +31,12 @@ export async function GET(request) {
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 10;
 
-    // Get tasks based on role
-    let userTasks = tasks;
-    if (decoded.role !== "admin") {
-      userTasks = tasks.filter((task) => task.user === decoded.userId);
+    // Get tasks based on role (now async)
+    let userTasks;
+    if (decoded.role === "admin") {
+      userTasks = await getAllTasks();
+    } else {
+      userTasks = await findTasksByUser(decoded.userId);
     }
 
     // Apply filters efficiently
@@ -41,7 +50,7 @@ export async function GET(request) {
       userTasks = userTasks.filter((task) => task.category === category);
     }
 
-    // Sort by creation date (newest first) - only if needed
+    // Sort by creation date (newest first)
     if (userTasks.length > 0) {
       userTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
@@ -73,6 +82,8 @@ export async function GET(request) {
 // POST - Create a new task
 export async function POST(request) {
   try {
+    await connectDB();
+
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -93,15 +104,11 @@ export async function POST(request) {
       );
     }
 
-    // Create new task
-    const task = {
+    // Create new task with user ID (now async)
+    const task = await addTask({
       ...taskData,
-      _id: Date.now().toString(),
       user: decoded.userId,
-      createdAt: new Date(),
-    };
-
-    tasks.push(task);
+    });
 
     return NextResponse.json(
       { message: "Task created successfully", task },

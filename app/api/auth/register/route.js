@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectDB, addUser, findUserByEmail } from "@/lib/db";
-import { generateToken, hashPassword } from "@/lib/auth";
+import { connectDB, addUser, findUserByEmail } from "@/lib/db.js";
+import { generateToken, hashPassword } from "@/lib/auth.js";
 
 export async function POST(request) {
   try {
@@ -36,8 +36,8 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    // Check if user already exists
-    const existingUser = findUserByEmail(email);
+    // Check if user already exists (now async)
+    const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return NextResponse.json(
         { error: "User already exists" },
@@ -58,10 +58,10 @@ export async function POST(request) {
       );
     }
 
-    // Create user
+    // Create user (now async)
     let user;
     try {
-      user = addUser({
+      user = await addUser({
         name,
         email,
         password: hashedPassword, // Save only the hashed password
