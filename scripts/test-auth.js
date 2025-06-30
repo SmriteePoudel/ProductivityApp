@@ -53,18 +53,37 @@ async function testAuth() {
 
     // Test 7: Admin User Test
     console.log("7. Testing Admin User...");
-    const adminUser = await findUserByEmail("admin@example.com");
-    if (adminUser) {
-      const adminPasswordValid = await comparePassword(
-        "admin123",
-        adminUser.password
-      );
-      console.log(`   ✅ Admin user found: ${adminUser.name}`);
-      console.log(
-        `   ✅ Admin password valid: ${adminPasswordValid ? "YES" : "NO"}\n`
-      );
+    const adminEmail = "admin@example.com";
+    console.log(`🔍 Looking for user: ${adminEmail}`);
+
+    const adminUser = await findUserByEmail(adminEmail);
+    if (!adminUser) {
+      console.log("❌ Admin user not found!");
+      return;
+    }
+
+    console.log("✅ Admin user found:");
+    console.log(`   Name: ${adminUser.name}`);
+    console.log(`   Email: ${adminUser.email}`);
+    console.log(`   Role: ${adminUser.role}`);
+    console.log(`   Has password: ${!!adminUser.password}`);
+
+    console.log(`🔐 Testing password: ${testPassword}`);
+
+    const adminPasswordValid = await comparePassword(
+      testPassword,
+      adminUser.password
+    );
+    console.log(`Password valid: ${adminPasswordValid ? "✅ YES" : "❌ NO"}`);
+
+    if (adminPasswordValid) {
+      console.log("\n🎉 Authentication test PASSED!");
+      console.log("You should be able to login with:");
+      console.log(`   Email: ${adminEmail}`);
+      console.log(`   Password: ${testPassword}`);
     } else {
-      console.log("   ⚠️ Admin user not found\n");
+      console.log("\n❌ Authentication test FAILED!");
+      console.log("Password verification failed.");
     }
 
     console.log("🎉 All authentication tests completed successfully!");

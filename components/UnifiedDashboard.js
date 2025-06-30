@@ -2494,34 +2494,94 @@ export default function UnifiedDashboard({
   const [activeTool, setActiveTool] = useState("calendar");
   const [profileAvatar, setProfileAvatar] = useState(user.avatar || null);
 
-  // Sidebar navigation items
-  const nav = [
-    { key: "dashboard", label: "Dashboard", icon: "🏠" },
-    {
-      key: "projects",
-      label: "Projects",
-      icon: "📁",
-      isDropdown: true,
-      children: [
-        { key: "project-categories", label: "Project Categories", icon: "🏷️" },
-        { key: "project-list", label: "Projects", icon: "📋" },
+  // Role-specific navigation items
+  const getRoleSpecificNav = (role) => {
+    const baseNav = [
+      { key: "dashboard", label: "Dashboard", icon: "🏠" },
+      { key: "projects", label: "Projects", icon: "📁" },
+      { key: "templates", label: "Templates", icon: "🗂️" },
+      { key: "settings", label: "Settings", icon: "⚙️" },
+    ];
+
+    const roleNav = {
+      admin: [
+        ...baseNav,
+        {
+          key: "user-management",
+          label: "User Management",
+          icon: "👥",
+          isDropdown: true,
+          children: [
+            { key: "users", label: "Users", icon: "👤" },
+            { key: "roles", label: "Roles", icon: "🛡️" },
+            { key: "permissions", label: "Permissions", icon: "🔑" },
+          ],
+        },
+        { key: "analytics", label: "Analytics", icon: "📊" },
+        { key: "system", label: "System", icon: "⚙️" },
       ],
-    },
-    { key: "templates", label: "Templates", icon: "🗂️" },
-    { key: "settings", label: "Settings", icon: "⚙️" },
-    {
-      key: "user-management",
-      label: "User Management",
-      icon: "👥",
-      adminOnly: true,
-      isDropdown: true,
-      children: [
-        { key: "users", label: "Users", icon: "👤" },
-        { key: "roles", label: "Roles", icon: "🛡️" },
-        { key: "permissions", label: "Permissions", icon: "🔑" },
+      hr: [
+        ...baseNav,
+        { key: "employees", label: "Employees", icon: "👥" },
+        { key: "recruitment", label: "Recruitment", icon: "📋" },
+        { key: "performance", label: "Performance", icon: "📈" },
+        { key: "reports", label: "Reports", icon: "📊" },
       ],
-    },
-  ];
+      marketing: [
+        ...baseNav,
+        { key: "campaigns", label: "Campaigns", icon: "📢" },
+        { key: "content", label: "Content", icon: "📝" },
+        { key: "analytics", label: "Analytics", icon: "📊" },
+        { key: "social", label: "Social Media", icon: "📱" },
+      ],
+      finance: [
+        ...baseNav,
+        { key: "budgets", label: "Budgets", icon: "💰" },
+        { key: "expenses", label: "Expenses", icon: "💸" },
+        { key: "reports", label: "Reports", icon: "📊" },
+        { key: "forecasting", label: "Forecasting", icon: "📈" },
+      ],
+      blog_writer: [
+        ...baseNav,
+        { key: "articles", label: "Articles", icon: "📝" },
+        { key: "drafts", label: "Drafts", icon: "📄" },
+        { key: "calendar", label: "Content Calendar", icon: "📅" },
+        { key: "research", label: "Research", icon: "🔍" },
+      ],
+      seo_manager: [
+        ...baseNav,
+        { key: "keywords", label: "Keywords", icon: "🔑" },
+        { key: "rankings", label: "Rankings", icon: "📈" },
+        { key: "content", label: "Content", icon: "📝" },
+        { key: "analytics", label: "SEO Analytics", icon: "📊" },
+      ],
+      project_manager: [
+        ...baseNav,
+        { key: "teams", label: "Teams", icon: "👥" },
+        { key: "timeline", label: "Timeline", icon: "📅" },
+        { key: "resources", label: "Resources", icon: "📦" },
+        { key: "reports", label: "Reports", icon: "📊" },
+      ],
+      developer: [
+        ...baseNav,
+        { key: "code", label: "Code", icon: "💻" },
+        { key: "bugs", label: "Bugs", icon: "🐛" },
+        { key: "deployments", label: "Deployments", icon: "🚀" },
+        { key: "documentation", label: "Documentation", icon: "📚" },
+      ],
+      designer: [
+        ...baseNav,
+        { key: "designs", label: "Designs", icon: "🎨" },
+        { key: "assets", label: "Assets", icon: "🖼️" },
+        { key: "prototypes", label: "Prototypes", icon: "📱" },
+        { key: "inspiration", label: "Inspiration", icon: "💡" },
+      ],
+    };
+
+    return roleNav[role] || baseNav;
+  };
+
+  const nav = getRoleSpecificNav(user.role);
 
   // Track open dropdowns
   const [openDropdowns, setOpenDropdowns] = useState({});
@@ -2582,6 +2642,293 @@ export default function UnifiedDashboard({
     </ul>
   );
 
+  // Role-specific content rendering
+  const renderRoleSpecificContent = () => {
+    const roleContent = {
+      admin: {
+        analytics: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">System Analytics</h2>
+            <p>Admin analytics dashboard</p>
+          </div>
+        ),
+        system: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">System Settings</h2>
+            <p>System configuration panel</p>
+          </div>
+        ),
+      },
+      hr: {
+        employees: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Employee Management</h2>
+            <p>HR employee dashboard</p>
+          </div>
+        ),
+        recruitment: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Recruitment</h2>
+            <p>Recruitment management</p>
+          </div>
+        ),
+        performance: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Performance Reviews</h2>
+            <p>Performance management</p>
+          </div>
+        ),
+        reports: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">HR Reports</h2>
+            <p>HR reporting dashboard</p>
+          </div>
+        ),
+      },
+      marketing: {
+        campaigns: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Marketing Campaigns</h2>
+            <p>Campaign management</p>
+          </div>
+        ),
+        content: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Content Management</h2>
+            <p>Content creation and management</p>
+          </div>
+        ),
+        analytics: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Marketing Analytics</h2>
+            <p>Marketing performance metrics</p>
+          </div>
+        ),
+        social: (
+          <div>
+            <div className="mb-6 p-4 bg-accent text-white rounded-lg shadow font-bold text-xl text-center tracking-wide">
+              Social Media Management
+            </div>
+            <div className="p-6 bg-gray-900 dark:bg-gray-800 rounded-lg shadow-md text-white">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span role="img" aria-label="Social Media">
+                  📱
+                </span>{" "}
+                Social Media
+              </h2>
+              <div className="mb-4">
+                <p className="text-lg font-semibold">Social Media Overview</p>
+                <ul className="list-disc list-inside text-gray-200 text-base mt-2 space-y-1">
+                  <li>
+                    Followers: <span className="font-bold">12,500</span>
+                  </li>
+                  <li>
+                    Posts This Week: <span className="font-bold">8</span>
+                  </li>
+                  <li>
+                    Engagement Rate: <span className="font-bold">5.2%</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="mb-4">
+                <p className="text-lg font-semibold mb-1">Recent Posts</p>
+                <div className="space-y-2">
+                  <div className="bg-gray-800 rounded p-3 flex flex-col gap-1">
+                    <span className="font-medium">
+                      "How to Boost Your Brand on Instagram"
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      2 days ago · 1,200 likes · 300 shares
+                    </span>
+                  </div>
+                  <div className="bg-gray-800 rounded p-3 flex flex-col gap-1">
+                    <span className="font-medium">
+                      "5 Twitter Trends to Watch in 2024"
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      4 days ago · 900 likes · 150 retweets
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="mb-4">
+                <p className="text-lg font-semibold mb-1">Upcoming Campaigns</p>
+                <ul className="list-disc list-inside text-gray-200 text-base space-y-1">
+                  <li>Spring Sale Launch - Mar 20</li>
+                  <li>Influencer Collaboration - Mar 25</li>
+                </ul>
+              </div>
+              {/* Add more social media widgets/content below as needed */}
+              <div className="mt-6">
+                <button className="bg-accent text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-accent/90 transition-all">
+                  Add Social Media Content
+                </button>
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      finance: {
+        budgets: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Budget Management</h2>
+            <p>Budget planning and tracking</p>
+          </div>
+        ),
+        expenses: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Expense Tracking</h2>
+            <p>Expense management</p>
+          </div>
+        ),
+        reports: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Financial Reports</h2>
+            <p>Financial reporting</p>
+          </div>
+        ),
+        forecasting: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Financial Forecasting</h2>
+            <p>Financial projections</p>
+          </div>
+        ),
+      },
+      blog_writer: {
+        articles: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Article Management</h2>
+            <p>Blog article management</p>
+          </div>
+        ),
+        drafts: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Draft Articles</h2>
+            <p>Article drafts</p>
+          </div>
+        ),
+        calendar: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Content Calendar</h2>
+            <p>Content planning calendar</p>
+          </div>
+        ),
+        research: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Research Tools</h2>
+            <p>Content research</p>
+          </div>
+        ),
+      },
+      seo_manager: {
+        keywords: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Keyword Research</h2>
+            <p>SEO keyword management</p>
+          </div>
+        ),
+        rankings: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Search Rankings</h2>
+            <p>Ranking tracking</p>
+          </div>
+        ),
+        content: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">SEO Content</h2>
+            <p>SEO-optimized content</p>
+          </div>
+        ),
+        analytics: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">SEO Analytics</h2>
+            <p>SEO performance metrics</p>
+          </div>
+        ),
+      },
+      project_manager: {
+        teams: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Team Management</h2>
+            <p>Project team coordination</p>
+          </div>
+        ),
+        timeline: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Project Timeline</h2>
+            <p>Project scheduling</p>
+          </div>
+        ),
+        resources: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Resource Management</h2>
+            <p>Resource allocation</p>
+          </div>
+        ),
+        reports: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Project Reports</h2>
+            <p>Project reporting</p>
+          </div>
+        ),
+      },
+      developer: {
+        code: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Code Repository</h2>
+            <p>Code management</p>
+          </div>
+        ),
+        bugs: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Bug Tracking</h2>
+            <p>Bug management</p>
+          </div>
+        ),
+        deployments: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Deployments</h2>
+            <p>Deployment management</p>
+          </div>
+        ),
+        documentation: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Documentation</h2>
+            <p>Technical documentation</p>
+          </div>
+        ),
+      },
+      designer: {
+        designs: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Design Projects</h2>
+            <p>Design project management</p>
+          </div>
+        ),
+        assets: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Design Assets</h2>
+            <p>Asset management</p>
+          </div>
+        ),
+        prototypes: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Prototypes</h2>
+            <p>Prototype management</p>
+          </div>
+        ),
+        inspiration: (
+          <div className="p-6 bg-white rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">Inspiration Board</h2>
+            <p>Design inspiration</p>
+          </div>
+        ),
+      },
+    };
+
+    return roleContent[user.role]?.[activeSection] || null;
+  };
+
   // Main content rendering
   let mainContent = null;
   if (activeSection === "dashboard") {
@@ -2622,6 +2969,20 @@ export default function UnifiedDashboard({
     mainContent = <PermissionsManager user={user} />;
   } else if (activeSection === "templates") {
     mainContent = <TemplatesPanel />;
+  } else {
+    // Check for role-specific content
+    const roleContent = renderRoleSpecificContent();
+    if (roleContent) {
+      mainContent = roleContent;
+    } else {
+      mainContent = (
+        <div className="p-6 bg-white rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold mb-4">Welcome, {user.name}!</h2>
+          <p className="text-gray-600">Role: {user.role}</p>
+          <p className="text-gray-600">This is your personalized dashboard.</p>
+        </div>
+      );
+    }
   }
 
   // Show add task button except in settings, roles, permissions, user management
@@ -2645,6 +3006,35 @@ export default function UnifiedDashboard({
     if (updated && updated.avatar) setProfileAvatar(updated.avatar);
   };
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies
+      });
+
+      if (response.ok) {
+        // Redirect to home page
+        router.push("/");
+      } else {
+        console.error("Logout failed:", response.status);
+        // Fallback: clear cookie manually and redirect
+        document.cookie =
+          "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        router.push("/");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback: clear cookie manually and redirect
+      document.cookie =
+        "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      router.push("/");
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800 relative">
       {/* Sidebar */}
@@ -2652,7 +3042,7 @@ export default function UnifiedDashboard({
         {/* Logo/Header */}
         <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-800 justify-between transition-colors duration-300">
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-wide">
-            Dashboard
+            {user.role.charAt(0).toUpperCase() + user.role.slice(1)} Dashboard
           </span>
         </div>
         {/* Navigation */}
@@ -2660,7 +3050,7 @@ export default function UnifiedDashboard({
         {/* Logout Button */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-800 transition-colors duration-300">
           <button
-            onClick={onLogout}
+            onClick={handleLogout}
             className="w-full flex items-center gap-2 px-4 py-2 bg-pastel-pink text-gray-900 rounded-lg hover:bg-pastel-blue transition-all duration-200 shadow-md hover:shadow-lg font-bold"
           >
             <span className="bg-gray-900 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">

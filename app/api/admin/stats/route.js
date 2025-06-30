@@ -7,29 +7,34 @@ import {
   getAllCategories,
   findTasksByUser,
   getActiveUserCount,
-} from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+} from "@/lib/db.js";
+import { requireAdmin } from "@/lib/auth.js";
 
 export const GET = requireAdmin(async (request) => {
   try {
     await connectDB();
 
-    const stats = getSystemStats();
-    const users = getUsers();
-    const tasks = getAllTasks();
-    const categories = getAllCategories();
-    const activeUserCount = getActiveUserCount();
+    const stats = await getSystemStats();
+    const users = await getUsers();
+    const tasks = await getAllTasks();
+    const categories = await getAllCategories();
+    const activeUserCount = await getActiveUserCount();
 
     // Add task count for each user
-    const usersWithTaskCount = users.map((user) => ({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      taskCount: findTasksByUser(user._id).length,
-    }));
+    const usersWithTaskCount = await Promise.all(
+      users.map(async (user) => {
+        const userTasks = await findTasksByUser(user._id);
+        return {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt,
+          taskCount: userTasks.length,
+        };
+      })
+    );
 
     return NextResponse.json({
       stats,

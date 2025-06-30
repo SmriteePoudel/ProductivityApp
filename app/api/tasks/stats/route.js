@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectDB, getUserStats } from "@/lib/db";
-import { verifyToken } from "@/lib/auth";
+import { connectDB, getUserStats } from "@/lib/db.js";
+import { verifyToken } from "@/lib/auth.js";
 
 export async function GET(request) {
   try {

@@ -6,6 +6,7 @@ import {
   getAllTasks,
   updateTask,
   deleteTask,
+  findUserById,
 } from "@/lib/db.js";
 import { verifyToken } from "@/lib/auth.js";
 
@@ -28,10 +29,11 @@ export async function GET(request) {
     const status = searchParams.get("status");
     const priority = searchParams.get("priority");
     const category = searchParams.get("category");
+    const assignedBy = searchParams.get("assignedBy");
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 10;
 
-    // Get tasks based on role (now async)
+    // Get tasks based on role and filters
     let userTasks;
     if (decoded.role === "admin") {
       userTasks = await getAllTasks();
@@ -48,6 +50,23 @@ export async function GET(request) {
     }
     if (category) {
       userTasks = userTasks.filter((task) => task.category === category);
+    }
+    if (assignedBy) {
+      userTasks = userTasks.filter((task) => task.assignedBy === assignedBy);
+    }
+
+    // Populate assignedToName for tasks that don't have it
+    for (let task of userTasks) {
+      if (task.user && !task.assignedToName) {
+        try {
+          const assignedUser = await findUserById(task.user);
+          if (assignedUser) {
+            task.assignedToName = assignedUser.name;
+          }
+        } catch (error) {
+          console.error("Error fetching user for task:", error);
+        }
+      }
     }
 
     // Sort by creation date (newest first)
@@ -104,11 +123,27 @@ export async function POST(request) {
       );
     }
 
+    console.log("📝 Incoming taskData:", taskData);
+
+    // If task is being assigned to someone else, populate assignedToName
+    if (taskData.assignedTo && taskData.assignedTo !== decoded.userId) {
+      try {
+        const assignedUser = await findUserById(taskData.assignedTo);
+        if (assignedUser) {
+          taskData.assignedToName = assignedUser.name;
+        }
+      } catch (error) {
+        console.error("Error fetching assigned user:", error);
+      }
+    }
+
     // Create new task with user ID (now async)
     const task = await addTask({
       ...taskData,
-      user: decoded.userId,
+      user: taskData.assignedTo || decoded.userId, // Use assignedTo if provided, otherwise current user
     });
+
+    console.log("✅ Created task:", task);
 
     return NextResponse.json(
       { message: "Task created successfully", task },

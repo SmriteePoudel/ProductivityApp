@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
-
-// Simple in-memory data storage
-let tasks = [];
-let categories = [];
+import {
+  connectDB,
+  findTasksByUser,
+  getAllTasks,
+  findCategoriesByUser,
+  getAllCategories,
+} from "@/lib/db.js";
+import { verifyToken } from "@/lib/auth.js";
 
 // GET - Fetch all dashboard data in a single request
 export async function GET(request) {
   try {
+    await connectDB();
+
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,11 +26,13 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit")) || 5;
 
-    // Get user tasks
-    const userTasks =
-      decoded.role === "admin"
-        ? tasks
-        : tasks.filter((task) => task.user === decoded.userId);
+    // Get user tasks (now async)
+    let userTasks;
+    if (decoded.role === "admin") {
+      userTasks = await getAllTasks();
+    } else {
+      userTasks = await findTasksByUser(decoded.userId);
+    }
 
     // Calculate stats
     const now = new Date();
@@ -41,11 +48,13 @@ export async function GET(request) {
       ).length,
     };
 
-    // Get user categories
-    const userCategories =
-      decoded.role === "admin"
-        ? categories
-        : categories.filter((cat) => cat.user === decoded.userId);
+    // Get user categories (now async)
+    let userCategories;
+    if (decoded.role === "admin") {
+      userCategories = await getAllCategories();
+    } else {
+      userCategories = await findCategoriesByUser(decoded.userId);
+    }
 
     // Get recent tasks (sorted by creation date, newest first)
     const recentTasks = userTasks

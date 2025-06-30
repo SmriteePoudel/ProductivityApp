@@ -280,6 +280,18 @@ export default function TaskList() {
                           Due: {formatDate(task.dueDate)}
                         </span>
                       )}
+                      {/* Show assignment info if task was assigned by admin */}
+                      {task.assignedBy === "admin" && (
+                        <span className="text-blue-500 dark:text-blue-400 text-sm flex items-center gap-1">
+                          <span>👑</span>
+                          Assigned by Admin
+                        </span>
+                      )}
+                      {task.assignedAt && task.assignedBy === "admin" && (
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          on {formatDate(task.assignedAt)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
