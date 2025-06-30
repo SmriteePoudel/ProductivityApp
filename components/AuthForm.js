@@ -8,7 +8,6 @@ export default function AuthForm({ onAuthSuccess }) {
     name: "",
     email: "",
     password: "",
-    role: "user",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -47,10 +46,7 @@ export default function AuthForm({ onAuthSuccess }) {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]:
-        e.target.name === "role"
-          ? e.target.value.toLowerCase()
-          : e.target.value,
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -60,7 +56,6 @@ export default function AuthForm({ onAuthSuccess }) {
       name: "",
       email: "",
       password: "",
-      role: "user",
     });
     setError("");
   };
@@ -170,30 +165,6 @@ export default function AuthForm({ onAuthSuccess }) {
             className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-200 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200"
             placeholder="Enter your name"
           />
-        </div>
-      )}
-
-      {activeTab === "register" && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Role 👑
-          </label>
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-200 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200"
-          >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-            <option value="moderator">Moderator</option>
-            <option value="editor">Editor</option>
-            <option value="viewer">Viewer</option>
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            Admin: full control · Moderator: manage content · Editor:
-            create/edit content · Viewer: read-only
-          </p>
         </div>
       )}
 
