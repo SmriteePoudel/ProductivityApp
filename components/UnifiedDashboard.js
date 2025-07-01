@@ -529,912 +529,177 @@ function Settings({ onProfileUpdate }) {
     </div>
   );
 }
+
+function RoleSummaryBox({ users }) {
+  // Build a map of role -> users
+  const roleMap = {};
+  users.forEach((user) => {
+    (user.roles || [user.role || "user"]).forEach((role) => {
+      if (!roleMap[role]) roleMap[role] = [];
+      roleMap[role].push(user);
+    });
+  });
+  const roles = Object.keys(roleMap);
+  return (
+    <div className="mb-8 p-6 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-2xl shadow border border-purple-200 dark:border-purple-700">
+      <h3 className="text-xl font-bold mb-2 text-purple-800 dark:text-purple-200">
+        User Roles Overview
+      </h3>
+      <div className="flex flex-wrap gap-6">
+        {roles.length === 0 ? (
+          <span className="text-gray-500">No roles found.</span>
+        ) : (
+          roles.map((role) => (
+            <div key={role} className="flex flex-col items-start min-w-[120px]">
+              <span className="font-semibold text-purple-700 dark:text-purple-200 mb-1">
+                {role}{" "}
+                <span className="ml-1 text-xs bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100 rounded-full px-2 py-0.5">
+                  {roleMap[role].length}
+                </span>
+              </span>
+              <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
+                {roleMap[role].map((u) => (
+                  <li key={u._id || u.email}>{u.name || u.email}</li>
+                ))}
+              </ul>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function RolesManager() {
-  const [roles, setRoles] = useState([
-    {
-      id: 1,
-      name: "user",
-      purpose: "Default role for general usage",
-      permissions: [
-        "read_own_content",
-        "create_content",
-        "edit_own_content",
-        "delete_own_content",
-      ],
-      userCount: 0,
-      color: "from-blue-500 to-cyan-600",
-      icon: "👤",
-    },
-    {
-      id: 2,
-      name: "admin",
-      purpose: "Full control over everything",
-      permissions: [
-        "read_all",
-        "create_all",
-        "edit_all",
-        "delete_all",
-        "manage_users",
-        "manage_roles",
-        "manage_permissions",
-        "system_settings",
-      ],
-      userCount: 0,
-      color: "from-purple-600 to-pink-600",
-      icon: "👑",
-    },
-    {
-      id: 3,
-      name: "moderator",
-      purpose:
-        "Can manage other users' content (edit/delete), but not full admin power",
-      permissions: [
-        "read_all",
-        "create_content",
-        "edit_all",
-        "delete_all",
-        "moderate_content",
-        "manage_categories",
-      ],
-      userCount: 0,
-      color: "from-orange-500 to-red-600",
-      icon: "🛡️",
-    },
-    {
-      id: 4,
-      name: "editor",
-      purpose: "Can create and edit content, but cannot manage users",
-      permissions: [
-        "read_all",
-        "create_content",
-        "edit_all",
-        "delete_own_content",
-        "publish_content",
-      ],
-      userCount: 0,
-      color: "from-green-500 to-emerald-600",
-      icon: "✏️",
-    },
-    {
-      id: 5,
-      name: "viewer",
-      purpose: "Read-only access to certain areas",
-      permissions: ["read_public", "read_own_content"],
-      userCount: 0,
-      color: "from-gray-500 to-slate-600",
-      icon: "👁️",
-    },
-  ]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const [editingRole, setEditingRole] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-
-  const allPermissions = [
-    {
-      key: "read_public",
-      label: "Read Public Content",
-      description: "Can view public content",
-      icon: "📖",
-    },
-    {
-      key: "read_own_content",
-      label: "Read Own Content",
-      description: "Can view their own content",
-      icon: "📄",
-    },
-    {
-      key: "read_all",
-      label: "Read All Content",
-      description: "Can view all content",
-      icon: "🔍",
-    },
-    {
-      key: "create_content",
-      label: "Create Content",
-      description: "Can create new content",
-      icon: "➕",
-    },
-    {
-      key: "edit_own_content",
-      label: "Edit Own Content",
-      description: "Can edit their own content",
-      icon: "✏️",
-    },
-    {
-      key: "edit_all",
-      label: "Edit All Content",
-      description: "Can edit any content",
-      icon: "🔄",
-    },
-    {
-      key: "delete_own_content",
-      label: "Delete Own Content",
-      description: "Can delete their own content",
-      icon: "🗑️",
-    },
-    {
-      key: "delete_all",
-      label: "Delete All Content",
-      description: "Can delete any content",
-      icon: "💥",
-    },
-    {
-      key: "publish_content",
-      label: "Publish Content",
-      description: "Can publish content",
-      icon: "📢",
-    },
-    {
-      key: "moderate_content",
-      label: "Moderate Content",
-      description: "Can moderate user content",
-      icon: "⚖️",
-    },
-    {
-      key: "manage_categories",
-      label: "Manage Categories",
-      description: "Can manage content categories",
-      icon: "📂",
-    },
-    {
-      key: "manage_users",
-      label: "Manage Users",
-      description: "Can manage user accounts",
-      icon: "👥",
-    },
-    {
-      key: "manage_roles",
-      label: "Manage Roles",
-      description: "Can manage user roles",
-      icon: "🎭",
-    },
-    {
-      key: "manage_permissions",
-      label: "Manage Permissions",
-      description: "Can manage system permissions",
-      icon: "🔐",
-    },
-    {
-      key: "system_settings",
-      label: "System Settings",
-      description: "Can access system settings",
-      icon: "⚙️",
-    },
-  ];
-
-  const roleColors = [
-    "from-blue-500 to-cyan-600",
-    "from-purple-600 to-pink-600",
-    "from-orange-500 to-red-600",
-    "from-green-500 to-emerald-600",
-    "from-gray-500 to-slate-600",
-    "from-yellow-500 to-orange-600",
-    "from-pink-500 to-rose-600",
-    "from-indigo-500 to-purple-600",
-    "from-teal-500 to-cyan-600",
-    "from-red-500 to-pink-600",
-  ];
-
-  const roleIcons = [
-    "👤",
-    "👑",
-    "🛡️",
-    "✏️",
-    "👁️",
-    "🔧",
-    "📊",
-    "🎯",
-    "⚡",
-    "🌟",
-  ];
-
-  const handleAddNewRole = () => {
-    const newRole = {
-      id: Date.now(), // Generate unique ID
-      name: "",
-      purpose: "",
-      permissions: [],
-      userCount: 0,
-      color: roleColors[Math.floor(Math.random() * roleColors.length)],
-      icon: roleIcons[Math.floor(Math.random() * roleIcons.length)],
-    };
-    setEditingRole(newRole);
-    setIsAdding(true);
-    setShowForm(true);
+  // Map role to description (should match PermissionsManager)
+  const roleDescriptions = {
+    admin: "Full access to all system features and settings.",
+    designer: "Can work on design tasks and manage design assets.",
+    developer: "Can work on development tasks and commit code.",
+    blog_writer: "Can write and manage blog articles.",
+    user: "Can view and edit their own tasks.",
+    hr: "Can manage employees and review performance.",
+    marketing: "Can manage marketing campaigns and view reports.",
+    finance: "Can manage budgets and view financial reports.",
+    seo_manager: "Can manage SEO and view SEO reports.",
+    project_manager: "Can manage projects, assign tasks, and view reports.",
   };
 
-  const handleEdit = (role) => {
-    setEditingRole({ ...role });
-    setIsAdding(false);
-    setShowForm(true);
-  };
-
-  const handleSave = (e) => {
-    e.preventDefault();
-    if (!editingRole.name.trim()) {
-      alert("Role name is required!");
-      return;
-    }
-
-    if (isAdding) {
-      // Check if role name already exists
-      if (
-        roles.some(
-          (role) => role.name.toLowerCase() === editingRole.name.toLowerCase()
-        )
-      ) {
-        alert("A role with this name already exists!");
-        return;
-      }
-      // Add new role
-      setRoles([...roles, editingRole]);
-    } else {
-      // Update existing role
-      setRoles(roles.map((r) => (r.id === editingRole.id ? editingRole : r)));
-    }
-
-    setEditingRole(null);
-    setIsAdding(false);
-    setShowForm(false);
-  };
-
-  const handleCancel = () => {
-    setEditingRole(null);
-    setIsAdding(false);
-    setShowForm(false);
-  };
-
-  const togglePermission = (permissionKey) => {
-    if (!editingRole) return;
-
-    const newPermissions = editingRole.permissions.includes(permissionKey)
-      ? editingRole.permissions.filter((p) => p !== permissionKey)
-      : [...editingRole.permissions, permissionKey];
-
-    setEditingRole({ ...editingRole, permissions: newPermissions });
-  };
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/admin/stats")
+      .then((res) => res.json())
+      .then((data) => {
+        setUsers(data.users || []);
+      })
+      .catch((error) => {
+        console.error("Error fetching users:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      <RoleSummaryBox users={users} />
       <div className="text-center">
-        <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-          🎭 Role Management
+        <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-4">
+          👥 Role Management
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
-          Manage user roles and their associated permissions to control access
-          across your application
+          View all users and their assigned roles
         </p>
       </div>
-
-      {/* Add Role Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleAddNewRole}
-          className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold rounded-2xl shadow-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 flex items-center gap-3"
-        >
-          <span className="text-xl">➕</span>
-          Add New Role
-        </button>
-      </div>
-
-      {/* Roles List */}
-      <div className="grid gap-6">
-        {roles.map((role) => (
-          <div
-            key={role.id}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-          >
-            <div className="flex items-center justify-between p-6">
-              <div className="flex items-center gap-4">
-                <div className="text-3xl">{role.icon || "👤"}</div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200 capitalize">
-                    {role.name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                    {role.purpose}
-                  </p>
-                  <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">
-                    {role.userCount} users assigned
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(role)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-200 shadow-md"
-                >
-                  ✏️ Edit
-                </button>
-                {role.name !== "admin" && role.name !== "user" && (
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Are you sure you want to delete the ${role.name} role?`
-                        )
-                      ) {
-                        setRoles(roles.filter((r) => r.id !== role.id));
-                      }
-                    }}
-                    className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all duration-200 shadow-md"
+      <div className="overflow-x-auto">
+        <table className="w-full table-auto border-collapse border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+          <thead className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900">
+            <tr>
+              <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                Name
+              </th>
+              <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                Email
+              </th>
+              <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                Roles
+              </th>
+              <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                Role Description
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={4} className="text-center py-8 text-gray-500">
+                  Loading users...
+                </td>
+              </tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="text-center py-8 text-gray-500">
+                  No users found.
+                </td>
+              </tr>
+            ) : (
+              users.map((user) => {
+                // Get all roles for the user
+                const userRoles =
+                  user.roles && user.roles.length > 0
+                    ? user.roles
+                    : [user.role || "user"];
+                // Get descriptions for all roles
+                const descriptions = userRoles.map(
+                  (role) => roleDescriptions[role] || "Custom role"
+                );
+                return (
+                  <tr
+                    key={user._id}
+                    className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    🗑️ Delete
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="px-6 pb-6">
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                  <span className="text-lg">🔐</span>
-                  Permissions ({role.permissions.length})
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {role.permissions.map((permission) => {
-                    const permInfo = allPermissions.find(
-                      (p) => p.key === permission
-                    );
-                    return (
-                      <span
-                        key={permission}
-                        className="px-3 py-1 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900 dark:to-emerald-900 dark:text-green-200 rounded-full text-xs font-medium shadow-sm"
-                        title={permInfo?.description}
-                      >
-                        {permInfo?.icon} {permInfo?.label || permission}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Edit Form */}
-      {showForm && editingRole && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 rounded-t-2xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <span className="text-3xl">{editingRole.icon || "👤"}</span>
-                  <div>
-                    <h3 className="text-2xl font-bold">
-                      {isAdding
-                        ? "Create New Role"
-                        : `Edit Role: ${editingRole.name}`}
-                    </h3>
-                    <p className="text-white/90">
-                      {isAdding
-                        ? "Configure new role permissions and settings"
-                        : "Configure role permissions and settings"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleCancel}
-                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all duration-200"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleSave} className="p-6 space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Role Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={editingRole.name}
-                    onChange={(e) =>
-                      setEditingRole({ ...editingRole, name: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-purple-500 focus:outline-none transition-colors"
-                    disabled={
-                      !isAdding &&
-                      (editingRole.name === "admin" ||
-                        editingRole.name === "user")
-                    }
-                    placeholder="Enter role name"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Role Icon
-                  </label>
-                  <input
-                    type="text"
-                    value={editingRole.icon || ""}
-                    onChange={(e) =>
-                      setEditingRole({ ...editingRole, icon: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-purple-500 focus:outline-none transition-colors text-center text-2xl"
-                    placeholder="🎭"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Purpose
-                </label>
-                <textarea
-                  value={editingRole.purpose}
-                  onChange={(e) =>
-                    setEditingRole({ ...editingRole, purpose: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-purple-500 focus:outline-none transition-colors resize-none"
-                  rows="3"
-                  placeholder="Describe the purpose of this role..."
-                />
-              </div>
-
-              {/* Permissions Section */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                  Permissions ({editingRole.permissions.length} selected)
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                  {allPermissions.map((permission) => (
-                    <label
-                      key={permission.key}
-                      className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer hover:shadow-md ${
-                        editingRole.permissions.includes(permission.key)
-                          ? "border-purple-300 bg-purple-50 dark:bg-purple-900/20"
-                          : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-300"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={editingRole.permissions.includes(
-                          permission.key
-                        )}
-                        onChange={() => togglePermission(permission.key)}
-                        className="rounded text-purple-600 focus:ring-purple-500 focus:ring-2"
-                      />
-                      <div className="flex items-center gap-3 flex-1">
-                        <span className="text-xl">{permission.icon}</span>
-                        <div>
-                          <div className="font-medium text-gray-800 dark:text-gray-200">
-                            {permission.label}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {permission.description}
-                          </div>
-                        </div>
+                    <td className="px-6 py-4 text-gray-800 dark:text-gray-200">
+                      {user.name || user.email}
+                    </td>
+                    <td className="px-6 py-4 text-gray-800 dark:text-gray-200">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {userRoles.map((role) => (
+                          <span
+                            key={role}
+                            className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 dark:from-purple-900 dark:to-pink-900 dark:text-purple-200 rounded-full text-xs font-medium shadow-sm"
+                          >
+                            {role}
+                          </span>
+                        ))}
                       </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-600">
-                <button
-                  type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-                >
-                  {isAdding ? "💾 Create Role" : "💾 Save Changes"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="flex-1 px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-400 dark:hover:bg-gray-500 transition-all duration-300"
-                >
-                  ❌ Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-function PermissionsManager({ user }) {
-  const [permissions, setPermissions] = useState({
-    read_public: {
-      user: true,
-      admin: true,
-      moderator: true,
-      editor: true,
-      viewer: true,
-    },
-    read_own_content: {
-      user: true,
-      admin: true,
-      moderator: true,
-      editor: true,
-      viewer: true,
-    },
-    read_all: {
-      user: false,
-      admin: true,
-      moderator: true,
-      editor: true,
-      viewer: false,
-    },
-    create_content: {
-      user: true,
-      admin: true,
-      moderator: true,
-      editor: true,
-      viewer: false,
-    },
-    edit_own_content: {
-      user: true,
-      admin: true,
-      moderator: true,
-      editor: true,
-      viewer: false,
-    },
-    edit_all: {
-      user: false,
-      admin: true,
-      moderator: true,
-      editor: true,
-      viewer: false,
-    },
-    delete_own_content: {
-      user: true,
-      admin: true,
-      moderator: true,
-      editor: true,
-      viewer: false,
-    },
-    delete_all: {
-      user: false,
-      admin: true,
-      moderator: true,
-      editor: false,
-      viewer: false,
-    },
-    publish_content: {
-      user: false,
-      admin: true,
-      moderator: false,
-      editor: true,
-      viewer: false,
-    },
-    moderate_content: {
-      user: false,
-      admin: true,
-      moderator: true,
-      editor: false,
-      viewer: false,
-    },
-    manage_categories: {
-      user: false,
-      admin: true,
-      moderator: true,
-      editor: false,
-      viewer: false,
-    },
-    manage_users: {
-      user: false,
-      admin: true,
-      moderator: false,
-      editor: false,
-      viewer: false,
-    },
-    manage_roles: {
-      user: false,
-      admin: true,
-      moderator: false,
-      editor: false,
-      viewer: false,
-    },
-    manage_permissions: {
-      user: false,
-      admin: true,
-      moderator: false,
-      editor: false,
-      viewer: false,
-    },
-    system_settings: {
-      user: false,
-      admin: true,
-      moderator: false,
-      editor: false,
-      viewer: false,
-    },
-  });
-
-  const permissionCategories = [
-    {
-      name: "Content Access",
-      permissions: ["read_public", "read_own_content", "read_all"],
-    },
-    {
-      name: "Content Management",
-      permissions: [
-        "create_content",
-        "edit_own_content",
-        "edit_all",
-        "delete_own_content",
-        "delete_all",
-        "publish_content",
-      ],
-    },
-    {
-      name: "Moderation",
-      permissions: ["moderate_content", "manage_categories"],
-    },
-    {
-      name: "User Management",
-      permissions: ["manage_users", "manage_roles", "manage_permissions"],
-    },
-    {
-      name: "System",
-      permissions: ["system_settings"],
-    },
-  ];
-
-  const permissionLabels = {
-    read_public: "Read Public Content",
-    read_own_content: "Read Own Content",
-    read_all: "Read All Content",
-    create_content: "Create Content",
-    edit_own_content: "Edit Own Content",
-    edit_all: "Edit All Content",
-    delete_own_content: "Delete Own Content",
-    delete_all: "Delete All Content",
-    publish_content: "Publish Content",
-    moderate_content: "Moderate Content",
-    manage_categories: "Manage Categories",
-    manage_users: "Manage Users",
-    manage_roles: "Manage Roles",
-    manage_permissions: "Manage Permissions",
-    system_settings: "System Settings",
-  };
-
-  const roles = ["user", "admin", "moderator", "editor", "viewer"];
-
-  const savePermissions = (newPerms) => {
-    setPermissions(newPerms);
-    // In a real app, you'd save to backend here
-    console.log("Permissions updated:", newPerms);
-  };
-
-  const handleToggle = (perm, role) => {
-    const newPerms = {
-      ...permissions,
-      [perm]: {
-        ...permissions[perm],
-        [role]: !permissions[perm][role],
-      },
-    };
-    savePermissions(newPerms);
-  };
-
-  const resetToDefaults = () => {
-    const defaultPermissions = {
-      read_public: {
-        user: true,
-        admin: true,
-        moderator: true,
-        editor: true,
-        viewer: true,
-      },
-      read_own_content: {
-        user: true,
-        admin: true,
-        moderator: true,
-        editor: true,
-        viewer: true,
-      },
-      read_all: {
-        user: false,
-        admin: true,
-        moderator: true,
-        editor: true,
-        viewer: false,
-      },
-      create_content: {
-        user: true,
-        admin: true,
-        moderator: true,
-        editor: true,
-        viewer: false,
-      },
-      edit_own_content: {
-        user: true,
-        admin: true,
-        moderator: true,
-        editor: true,
-        viewer: false,
-      },
-      edit_all: {
-        user: false,
-        admin: true,
-        moderator: true,
-        editor: true,
-        viewer: false,
-      },
-      delete_own_content: {
-        user: true,
-        admin: true,
-        moderator: true,
-        editor: true,
-        viewer: false,
-      },
-      delete_all: {
-        user: false,
-        admin: true,
-        moderator: true,
-        editor: false,
-        viewer: false,
-      },
-      publish_content: {
-        user: false,
-        admin: true,
-        moderator: false,
-        editor: true,
-        viewer: false,
-      },
-      moderate_content: {
-        user: false,
-        admin: true,
-        moderator: true,
-        editor: false,
-        viewer: false,
-      },
-      manage_categories: {
-        user: false,
-        admin: true,
-        moderator: true,
-        editor: false,
-        viewer: false,
-      },
-      manage_users: {
-        user: false,
-        admin: true,
-        moderator: false,
-        editor: false,
-        viewer: false,
-      },
-      manage_roles: {
-        user: false,
-        admin: true,
-        moderator: false,
-        editor: false,
-        viewer: false,
-      },
-      manage_permissions: {
-        user: false,
-        admin: true,
-        moderator: false,
-        editor: false,
-        viewer: false,
-      },
-      system_settings: {
-        user: false,
-        admin: true,
-        moderator: false,
-        editor: false,
-        viewer: false,
-      },
-    };
-    savePermissions(defaultPermissions);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-          Permission Management
-        </h2>
-        <button
-          onClick={resetToDefaults}
-          className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all"
-        >
-          Reset to Defaults
-        </button>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {/* Header */}
-        <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
-          <div className="grid grid-cols-6 gap-4 items-center">
-            <div className="col-span-2">
-              <h3 className="font-semibold text-gray-800 dark:text-gray-200">
-                Permission
-              </h3>
-            </div>
-            {roles.map((role) => (
-              <div key={role} className="text-center">
-                <span className="font-medium text-gray-700 dark:text-gray-300 capitalize text-sm">
-                  {role}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Permission Categories */}
-        {permissionCategories.map((category) => (
-          <div key={category.name}>
-            <div className="bg-gray-100 dark:bg-gray-600 px-6 py-2">
-              <h4 className="font-medium text-gray-700 dark:text-gray-300 text-sm">
-                {category.name}
-              </h4>
-            </div>
-            {category.permissions.map((permission) => (
-              <div
-                key={permission}
-                className="px-6 py-4 border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <div className="grid grid-cols-6 gap-4 items-center">
-                  <div className="col-span-2">
-                    <div className="font-medium text-gray-800 dark:text-gray-200">
-                      {permissionLabels[permission]}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {permission}
-                    </div>
-                  </div>
-                  {roles.map((role) => (
-                    <div key={role} className="text-center">
-                      <label className="flex items-center justify-center">
-                        <input
-                          type="checkbox"
-                          checked={permissions[permission][role]}
-                          onChange={() => handleToggle(permission, role)}
-                          className="rounded text-accent focus:ring-accent"
-                          disabled={user.role !== "admin"}
-                        />
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {/* Summary */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-        <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
-          Role Summary
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
-          {roles.map((role) => {
-            const rolePermissions = Object.values(permissions).filter(
-              (perm) => perm[role]
-            ).length;
-            const totalPermissions = Object.keys(permissions).length;
-            return (
-              <div key={role} className="text-center">
-                <div className="font-medium text-gray-700 dark:text-gray-300 capitalize">
-                  {role}
-                </div>
-                <div className="text-gray-500 dark:text-gray-400">
-                  {rolePermissions}/{totalPermissions} permissions
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
+                      <ul className="list-disc pl-4 space-y-1">
+                        {descriptions.map((desc, idx) => (
+                          <li key={idx}>{desc}</li>
+                        ))}
+                      </ul>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-// Add ProjectManager component
-// ProjectManager component is now imported from ./ProjectManager.js
+export function RolesManagerBox() {
+  return <RolesManager />;
+}
 
 // Add TemplateDetailPanel component
 function TemplateDetailPanel({ template, onBack, onSaveProject }) {
@@ -2497,6 +1762,9 @@ export default function UnifiedDashboard({
   const [toolsOpen, setToolsOpen] = useState(false);
   const [activeTool, setActiveTool] = useState("calendar");
   const [profileAvatar, setProfileAvatar] = useState(user.avatar || null);
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userManagementOpen, setUserManagementOpen] = useState(false);
 
   // Social Media Management hooks (must be at the top, before any function definitions)
   const [showAddSocialForm, setShowAddSocialForm] = useState(false);
@@ -2528,17 +1796,6 @@ export default function UnifiedDashboard({
     const roleNav = {
       admin: [
         ...baseNav,
-        {
-          key: "user-management",
-          label: "User Management",
-          icon: "👥",
-          isDropdown: true,
-          children: [
-            { key: "users", label: "Users", icon: "👤" },
-            { key: "roles", label: "Roles", icon: "🛡️" },
-            { key: "permissions", label: "Permissions", icon: "🔑" },
-          ],
-        },
         { key: "analytics", label: "Analytics", icon: "📊" },
         { key: "system", label: "System", icon: "⚙️" },
       ],
@@ -2618,6 +1875,24 @@ export default function UnifiedDashboard({
     // eslint-disable-next-line
   }, [activeSection]);
 
+  // Fetch users when in user management section
+  useEffect(() => {
+    if (activeSection === "users" && user.role === "admin") {
+      setUsersLoading(true);
+      fetch("/api/admin/stats")
+        .then((res) => res.json())
+        .then((data) => {
+          setUsers(data.users || []);
+        })
+        .catch((error) => {
+          console.error("Error fetching users:", error);
+        })
+        .finally(() => {
+          setUsersLoading(false);
+        });
+    }
+  }, [activeSection, user.role, refreshKey]);
+
   // Helper to render sidebar items
   const renderNav = (items, parent = null) => (
     <ul className="space-y-1">
@@ -2626,13 +1901,14 @@ export default function UnifiedDashboard({
         const isActive = activeSection === item.key;
         const isDropdown = item.isDropdown;
         const isOpen = openDropdowns[item.key];
+
         return (
           <li key={item.key}>
             <button
               className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
                 isActive || (isDropdown && isOpen)
-                  ? "bg-accent/20 text-accent"
-                  : "text-gray-200 hover:bg-accent/10 hover:text-accent"
+                  ? "bg-purple-500/20 text-purple-700 dark:text-purple-300"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-300"
               }`}
               onClick={() => {
                 if (isDropdown) {
@@ -2655,7 +1931,7 @@ export default function UnifiedDashboard({
               )}
             </button>
             {isDropdown && isOpen && item.children && (
-              <div className="ml-4 mt-1 border-l border-accent pl-2">
+              <div className="ml-4 mt-1 border-l border-purple-500 pl-2">
                 {renderNav(item.children, item.key)}
               </div>
             )}
@@ -2968,7 +2244,7 @@ export default function UnifiedDashboard({
               <h2 className="text-2xl font-bold mb-4">Keyword Research</h2>
               <p>SEO keyword management</p>
             </div>
-            <EditableSEOKeywordsBox />
+            <SEOKeywordsBox />
           </>
         ),
         rankings: (
@@ -2977,7 +2253,7 @@ export default function UnifiedDashboard({
               <h2 className="text-2xl font-bold mb-4">Search Rankings</h2>
               <p>Ranking tracking</p>
             </div>
-            <EditableSEORankingsBox />
+            <SEORankingsBox />
           </>
         ),
         content: (
@@ -2986,7 +2262,7 @@ export default function UnifiedDashboard({
               <h2 className="text-2xl font-bold mb-4">SEO Content</h2>
               <p>SEO-optimized content</p>
             </div>
-            <EditableSEOContentBox />
+            <SEOContentBox />
           </>
         ),
         analytics: (
@@ -2995,7 +2271,7 @@ export default function UnifiedDashboard({
               <h2 className="text-2xl font-bold mb-4">SEO Analytics</h2>
               <p>SEO performance metrics</p>
             </div>
-            <EditableSEOInfoBox />
+            <SEOInfoBox />
           </>
         ),
       },
@@ -3008,7 +2284,7 @@ export default function UnifiedDashboard({
                 Manage project teams and assignments
               </p>
             </div>
-            <EditableTeamInfoBox />
+            <TeamInfoBox />
             <TeamManagementBox />
           </>
         ),
@@ -3020,7 +2296,7 @@ export default function UnifiedDashboard({
                 Track project milestones and deadlines
               </p>
             </div>
-            <EditableTimelineInfoBox />
+            <TimelineInfoBox />
             <ProjectTimelineBox />
           </>
         ),
@@ -3032,7 +2308,7 @@ export default function UnifiedDashboard({
                 Allocate and track project resources
               </p>
             </div>
-            <EditableResourceInfoBox />
+            <ResourceInfoBox />
             <ResourceManagementBox />
           </>
         ),
@@ -3044,7 +2320,7 @@ export default function UnifiedDashboard({
                 Generate and view project analytics
               </p>
             </div>
-            <EditableReportInfoBox />
+            <ReportInfoBox />
             <ProjectReportsBox />
           </>
         ),
@@ -3070,7 +2346,7 @@ export default function UnifiedDashboard({
               </h2>
               <p>Deployment management</p>
             </div>
-            <EditableDeploymentInfoBox />
+            <DeploymentInfoBox />
           </>
         ),
         documentation: (
@@ -3081,7 +2357,7 @@ export default function UnifiedDashboard({
               </h2>
               <p>Technical documentation</p>
             </div>
-            <EditableDevDocsBox />
+            <DevDocsBox />
           </>
         ),
       },
@@ -3118,7 +2394,27 @@ export default function UnifiedDashboard({
 
   // Main content rendering
   let mainContent = null;
-  if (activeSection === "dashboard") {
+  if (activeSection === "roles" && user.role === "admin") {
+    mainContent = (
+      <>
+        <div className="p-6 bg-gradient-to-br from-purple-100 to-purple-200 text-gray-900 rounded-lg shadow-md mb-6">
+          <h2 className="text-2xl font-bold mb-4">Role Management</h2>
+          <p className="text-gray-600">Create and manage user roles</p>
+        </div>
+        <RolesManagerBox />
+      </>
+    );
+  } else if (activeSection === "permissions" && user.role === "admin") {
+    mainContent = (
+      <>
+        <div className="p-6 bg-gradient-to-br from-green-100 to-green-200 text-gray-900 rounded-lg shadow-md mb-6">
+          <h2 className="text-2xl font-bold mb-4">Permission Management</h2>
+          <p className="text-gray-600">Configure role-based permissions</p>
+        </div>
+        <PermissionsManager />
+      </>
+    );
+  } else if (activeSection === "dashboard") {
     mainContent = (
       <Dashboard
         user={user}
@@ -3144,16 +2440,180 @@ export default function UnifiedDashboard({
     );
   } else if (activeSection === "users" && user.role === "admin") {
     mainContent = (
-      <UserManager
-        user={editingUser}
-        onClose={() => setEditingUser(null)}
-        onUserUpdate={() => setRefreshKey((k) => k + 1)}
-      />
+      <>
+        <div className="p-6 bg-gradient-to-br from-blue-100 to-blue-200 text-gray-900 rounded-lg shadow-md mb-6">
+          <h2 className="text-2xl font-bold mb-4">User Management</h2>
+          <p className="text-gray-600">
+            Manage system users and their accounts
+          </p>
+        </div>
+        {/* Create User Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowUserManager(true)}
+            className="px-6 py-3 bg-gradient-to-r from-green-400 to-blue-400 text-white rounded-lg hover:from-green-500 hover:to-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+          >
+            <span className="mr-2">👤</span>
+            Create New User
+          </button>
+        </div>
+        {/* Users List */}
+        {usersLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading users...</p>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-8">
+            <span className="text-4xl mb-4 block">👥</span>
+            <p className="text-gray-500 mb-4">No users found.</p>
+            <button
+              onClick={() => setShowUserManager(true)}
+              className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-400 text-white rounded-lg hover:from-green-500 hover:to-blue-500 transition-all duration-200"
+            >
+              Create First User
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">
+                Users ({users.length})
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Name
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Email
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Roles
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Tasks
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr
+                      key={u._id}
+                      className="border-b border-gray-100 hover:bg-gray-50"
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+                              u.role === "admin"
+                                ? "bg-gradient-to-r from-pink-400 to-purple-400"
+                                : "bg-gradient-to-r from-blue-400 to-green-400"
+                            }`}
+                          >
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium text-gray-900">
+                            {u.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {(u.roles && u.roles.length > 0
+                            ? u.roles
+                            : [u.role || "user"]
+                          ).map((roleKey) => (
+                            <span
+                              key={roleKey}
+                              className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold"
+                            >
+                              {roleKey}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {u.taskCount || 0} tasks
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingUser(u);
+                              setShowUserManager(true);
+                            }}
+                            className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors text-sm"
+                          >
+                            Edit
+                          </button>
+                          {u.role !== "admin" && (
+                            <button
+                              onClick={async () => {
+                                if (
+                                  confirm(
+                                    "Are you sure you want to delete this user?"
+                                  )
+                                ) {
+                                  try {
+                                    const response = await fetch(
+                                      `/api/admin/users/${u._id}`,
+                                      {
+                                        method: "DELETE",
+                                      }
+                                    );
+                                    if (response.ok) {
+                                      setRefreshKey((k) => k + 1);
+                                    } else {
+                                      alert("Failed to delete user");
+                                    }
+                                  } catch (error) {
+                                    console.error(
+                                      "Error deleting user:",
+                                      error
+                                    );
+                                    alert("Error deleting user");
+                                  }
+                                }
+                              }}
+                              className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors text-sm"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        {/* User Manager Modal */}
+        {showUserManager && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-pink-100">
+              <UserManager
+                user={editingUser}
+                onClose={() => {
+                  setShowUserManager(false);
+                  setEditingUser(null);
+                }}
+                onUserUpdate={() => setRefreshKey((k) => k + 1)}
+              />
+            </div>
+          </div>
+        )}
+      </>
     );
-  } else if (activeSection === "roles" && user.role === "admin") {
-    mainContent = <RolesManager />;
-  } else if (activeSection === "permissions") {
-    mainContent = <PermissionsManager user={user} />;
   } else if (activeSection === "templates") {
     mainContent = <TemplatesPanel />;
   } else {
@@ -3228,6 +2688,66 @@ export default function UnifiedDashboard({
     }
   };
 
+  // User Management Dropdown Section (admin only)
+  const userManagementDropdown =
+    user.role === "admin" ? (
+      <div className="mt-8">
+        <div className="px-6 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+          User Management
+        </div>
+        <ul className="space-y-1 px-4">
+          <li>
+            <button
+              className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                ["roles", "permissions"].includes(activeSection)
+                  ? "bg-purple-500/20 text-purple-700 dark:text-purple-300"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-300"
+              }`}
+              onClick={() => setUserManagementOpen((prev) => !prev)}
+            >
+              <span className="text-lg">👥</span>
+              <span>User Management</span>
+              <span className="ml-auto text-xs">
+                {userManagementOpen ? "▲" : "▼"}
+              </span>
+            </button>
+            {userManagementOpen && (
+              <div className="ml-4 mt-1 border-l border-purple-500 pl-2">
+                <ul className="space-y-1">
+                  <li>
+                    <button
+                      className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                        activeSection === "roles"
+                          ? "bg-purple-500/20 text-purple-700 dark:text-purple-300"
+                          : "text-gray-700 dark:text-gray-200 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-300"
+                      }`}
+                      onClick={() => setActiveSection("roles")}
+                    >
+                      <span className="text-lg">🛡️</span>
+                      <span>Roles</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                        activeSection === "permissions"
+                          ? "bg-purple-500/20 text-purple-700 dark:text-purple-300"
+                          : "text-gray-700 dark:text-gray-200 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-300"
+                      }`}
+                      onClick={() => setActiveSection("permissions")}
+                    >
+                      <span className="text-lg">🔑</span>
+                      <span>Permissions</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </li>
+        </ul>
+      </div>
+    ) : null;
+
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-purple-900 to-gray-800 relative">
       {/* Sidebar */}
@@ -3239,7 +2759,15 @@ export default function UnifiedDashboard({
           </span>
         </div>
         {/* Navigation */}
-        <nav className="flex-1 py-4 overflow-y-auto">{renderNav(nav)}</nav>
+        <nav className="flex-1 py-4 overflow-y-auto">
+          {/* Debug info */}
+          <div className="px-4 py-2 text-xs text-gray-500 mb-2">
+            Role: {user.role} | Items: {nav.length}
+            {nav.map((item) => ` | ${item.key}`).join("")}
+          </div>
+          {renderNav(nav)}
+          {userManagementDropdown}
+        </nav>
         {/* Logout Button */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-800 transition-colors duration-300">
           <button
@@ -3255,11 +2783,7 @@ export default function UnifiedDashboard({
       </aside>
       {/* Main Content */}
       <main className="flex-1 p-6 lg:p-10 overflow-y-auto relative">
-        {activeSection === "settings" ? (
-          <Settings onProfileUpdate={handleProfileUpdate} />
-        ) : (
-          mainContent
-        )}
+        {mainContent}
         {showAddTaskBtn && (
           <button
             className="fixed bottom-8 right-8 z-40 bg-accent text-white rounded-full shadow-lg p-5 text-3xl hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-4 ring-accent"
@@ -3340,264 +2864,6 @@ export default function UnifiedDashboard({
         {/* AI Chat Bot */}
         <AIChatBot />
       </main>
-    </div>
-  );
-}
-
-// Add this new component at the bottom of the file:
-
-function EditableAnalyticsBox() {
-  const [analytics, setAnalytics] = useState([
-    { id: 1, label: "Leads Generated", value: 320 },
-    { id: 2, label: "Cost per Lead", value: "$7.50" },
-    { id: 3, label: "CTR", value: "4.2%" },
-  ]);
-  const [newLabel, setNewLabel] = useState("");
-  const [newValue, setNewValue] = useState("");
-  const [editingId, setEditingId] = useState(null);
-  const [editLabel, setEditLabel] = useState("");
-  const [editValue, setEditValue] = useState("");
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (newLabel && newValue) {
-      setAnalytics([
-        ...analytics,
-        { id: Date.now(), label: newLabel, value: newValue },
-      ]);
-      setNewLabel("");
-      setNewValue("");
-    }
-  };
-
-  const handleEdit = (item) => {
-    setEditingId(item.id);
-    setEditLabel(item.label);
-    setEditValue(item.value);
-  };
-
-  const handleSave = (id) => {
-    setAnalytics(
-      analytics.map((item) =>
-        item.id === id ? { ...item, label: editLabel, value: editValue } : item
-      )
-    );
-    setEditingId(null);
-    setEditLabel("");
-    setEditValue("");
-  };
-
-  const handleDelete = (id) => {
-    setAnalytics(analytics.filter((item) => item.id !== id));
-  };
-
-  return (
-    <div className="p-6 bg-blue-200 text-gray-900 rounded-lg shadow-md">
-      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-        <span role="img" aria-label="Chart">
-          📈
-        </span>{" "}
-        Campaign Analytics (Editable)
-      </h3>
-      {/* Dummy Chart Placeholder */}
-      <div className="bg-blue-100 rounded-lg p-4 mb-4 flex items-center justify-center">
-        <span className="text-gray-500 text-lg">[Chart Placeholder]</span>
-      </div>
-      <ul className="mb-4 space-y-2">
-        {analytics.map((item) => (
-          <li key={item.id} className="flex items-center gap-2">
-            {editingId === item.id ? (
-              <>
-                <input
-                  className="bg-blue-900 text-white border border-white rounded px-2 py-1 mr-2"
-                  value={editLabel}
-                  onChange={(e) => setEditLabel(e.target.value)}
-                />
-                <input
-                  className="bg-blue-900 text-white border border-white rounded px-2 py-1 mr-2"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                />
-                <button
-                  className="bg-green-500 text-white px-2 py-1 rounded mr-1"
-                  onClick={() => handleSave(item.id)}
-                >
-                  Save
-                </button>
-                <button
-                  className="bg-gray-500 text-white px-2 py-1 rounded"
-                  onClick={() => setEditingId(null)}
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">{item.label}:</span>
-                <span className="ml-1">{item.value}</span>
-                <button
-                  className="bg-yellow-400 text-blue-900 px-2 py-1 rounded ml-2"
-                  onClick={() => handleEdit(item)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="bg-red-500 text-white px-2 py-1 rounded ml-1"
-                  onClick={() => handleDelete(item.id)}
-                >
-                  Delete
-                </button>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      <form className="flex gap-2" onSubmit={handleAdd}>
-        <input
-          className="bg-blue-900 text-white border border-white rounded px-2 py-1"
-          placeholder="Metric Label"
-          value={newLabel}
-          onChange={(e) => setNewLabel(e.target.value)}
-        />
-        <input
-          className="bg-blue-900 text-white border border-white rounded px-2 py-1"
-          placeholder="Value"
-          value={newValue}
-          onChange={(e) => setNewValue(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="bg-green-500 text-white px-3 py-1 rounded font-semibold"
-        >
-          Add
-        </button>
-      </form>
-    </div>
-  );
-}
-
-// Update the EditableContentManagementBox to use a different pastel color (green)
-function EditableContentManagementBox() {
-  const [items, setItems] = useState([
-    { id: 1, title: "YouTube Video: Product Demo", status: "Draft" },
-    { id: 2, title: "Newsletter: April Edition", status: "Scheduled" },
-    { id: 3, title: "LinkedIn Post: Company Milestone", status: "Published" },
-  ]);
-  const [newTitle, setNewTitle] = useState("");
-  const [newStatus, setNewStatus] = useState("");
-  const [editingId, setEditingId] = useState(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editStatus, setEditStatus] = useState("");
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (newTitle && newStatus) {
-      setItems([
-        ...items,
-        { id: Date.now(), title: newTitle, status: newStatus },
-      ]);
-      setNewTitle("");
-      setNewStatus("");
-    }
-  };
-
-  const handleEdit = (item) => {
-    setEditingId(item.id);
-    setEditTitle(item.title);
-    setEditStatus(item.status);
-  };
-
-  const handleSave = (id) => {
-    setItems(
-      items.map((item) =>
-        item.id === id
-          ? { ...item, title: editTitle, status: editStatus }
-          : item
-      )
-    );
-    setEditingId(null);
-    setEditTitle("");
-    setEditStatus("");
-  };
-
-  const handleDelete = (id) => {
-    setItems(items.filter((item) => item.id !== id));
-  };
-
-  return (
-    <div className="p-6 bg-green-100 text-gray-900 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Content List</h2>
-      <ul className="mb-4 space-y-2">
-        {items.map((item) => (
-          <li key={item.id} className="flex items-center gap-2">
-            {editingId === item.id ? (
-              <>
-                <input
-                  className="bg-green-50 text-gray-900 border border-gray-400 rounded px-2 py-1 mr-2"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                />
-                <input
-                  className="bg-green-50 text-gray-900 border border-gray-400 rounded px-2 py-1 mr-2"
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value)}
-                />
-                <button
-                  className="bg-green-500 text-white px-2 py-1 rounded mr-1"
-                  onClick={() => handleSave(item.id)}
-                >
-                  Save
-                </button>
-                <button
-                  className="bg-gray-500 text-white px-2 py-1 rounded"
-                  onClick={() => setEditingId(null)}
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">{item.title}</span>
-                <span className="ml-2 text-xs bg-green-200 px-2 py-0.5 rounded">
-                  {item.status}
-                </span>
-                <button
-                  className="bg-yellow-400 text-green-900 px-2 py-1 rounded ml-2"
-                  onClick={() => handleEdit(item)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="bg-red-500 text-white px-2 py-1 rounded ml-1"
-                  onClick={() => handleDelete(item.id)}
-                >
-                  Delete
-                </button>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      <form className="flex gap-2" onSubmit={handleAdd}>
-        <input
-          className="bg-green-50 text-gray-900 border border-gray-400 rounded px-2 py-1"
-          placeholder="Content Title"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-        />
-        <input
-          className="bg-green-50 text-gray-900 border border-gray-400 rounded px-2 py-1"
-          placeholder="Status (e.g. Draft, Published)"
-          value={newStatus}
-          onChange={(e) => setNewStatus(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="bg-green-500 text-white px-3 py-1 rounded font-semibold"
-        >
-          Add
-        </button>
-      </form>
     </div>
   );
 }
@@ -3982,7 +3248,6 @@ function HRProjectsBox() {
   );
 }
 
-// ... existing code ...
 function EmployeesBox() {
   const [employees, setEmployees] = useState([
     { id: 1, name: "Alice Johnson", status: "Active" },
@@ -4562,3532 +3827,147 @@ function HRReportsBox() {
     </div>
   );
 }
-// ... existing code ...
 
-function RevenueForecastBox() {
-  const [forecasts, setForecasts] = useState([
+function PermissionsManager() {
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/admin/roles")
+      .then((res) => res.json())
+      .then((data) => setRoles(data))
+      .catch(() => setRoles([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Dummy fallback if backend is unreachable
+  const dummyRoles = [
     {
-      id: 1,
-      quarter: "Q1 2024",
-      revenue: 250000,
-      growth: 15,
-      confidence: "High",
-      notes: "Expected growth in SaaS subscriptions",
+      role: "admin",
+      permissions: ["all"],
+      description: "Full access to all system features and settings.",
     },
     {
-      id: 2,
-      quarter: "Q2 2024",
-      revenue: 287500,
-      growth: 12,
-      confidence: "Medium",
-      notes: "New product launch impact",
+      role: "designer",
+      permissions: ["view_tasks", "edit_own_tasks", "design_assets"],
+      description: "Can work on design tasks and manage design assets.",
     },
     {
-      id: 3,
-      quarter: "Q3 2024",
-      revenue: 315000,
-      growth: 8,
-      confidence: "Medium",
-      notes: "Seasonal adjustment considered",
+      role: "developer",
+      permissions: ["view_tasks", "edit_own_tasks", "commit_code"],
+      description: "Can work on development tasks and commit code.",
     },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [newForecast, setNewForecast] = useState({
-    quarter: "",
-    revenue: "",
-    growth: "",
-    confidence: "Medium",
-    notes: "",
-  });
+    {
+      role: "blog_writer",
+      permissions: ["write_articles", "view_tasks"],
+      description: "Can write and manage blog articles.",
+    },
+    {
+      role: "user",
+      permissions: ["view_tasks", "edit_own_tasks"],
+      description: "Can view and edit their own tasks.",
+    },
+    {
+      role: "hr",
+      permissions: ["manage_employees", "review_performance", "view_reports"],
+      description: "Can manage employees and review performance.",
+    },
+    {
+      role: "marketing",
+      permissions: ["manage_campaigns", "view_reports"],
+      description: "Can manage marketing campaigns and view reports.",
+    },
+    {
+      role: "finance",
+      permissions: ["manage_budgets", "view_financials", "view_reports"],
+      description: "Can manage budgets and view financial reports.",
+    },
+    {
+      role: "seo_manager",
+      permissions: ["manage_seo", "view_reports"],
+      description: "Can manage SEO and view SEO reports.",
+    },
+    {
+      role: "project_manager",
+      permissions: ["manage_projects", "assign_tasks", "view_reports"],
+      description: "Can manage projects, assign tasks, and view reports.",
+    },
+  ];
 
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newForecast.quarter || !newForecast.revenue) return;
-
-    const forecast = {
-      id: Date.now(),
-      ...newForecast,
-    };
-
-    setForecasts([...forecasts, forecast]);
-    setNewForecast({
-      quarter: "",
-      revenue: "",
-      growth: "",
-      confidence: "Medium",
-      notes: "",
-    });
-  };
-
-  const handleEdit = (forecast) => {
-    setEditingId(forecast.id);
-  };
-
-  const handleSave = (id) => {
-    setForecasts(
-      forecasts.map((f) =>
-        f.id === id
-          ? {
-              ...f,
-              quarter: document.getElementById(`forecast-quarter-${id}`).value,
-              revenue: Number(
-                document.getElementById(`forecast-revenue-${id}`).value
-              ),
-              growth: Number(
-                document.getElementById(`forecast-growth-${id}`).value
-              ),
-              confidence: document.getElementById(`forecast-confidence-${id}`)
-                .value,
-              notes: document.getElementById(`forecast-notes-${id}`).value,
-            }
-          : f
-      )
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setForecasts(forecasts.filter((f) => f.id !== id));
-  };
-
-  const inputClasses =
-    "w-full p-2 rounded border border-[#B8F3B8] focus:outline-none focus:border-[#7FE37F] text-black placeholder-gray-500";
-  const editInputClasses =
-    "w-full p-1 rounded border border-[#B8F3B8] text-black";
+  const displayRoles = roles.length > 0 ? roles : dummyRoles;
 
   return (
-    <div className="bg-gradient-to-br from-[#E6FFE6] to-[#F0FFF0] p-6 rounded-lg shadow-md border border-[#B8F3B8]">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Revenue Forecasts
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newForecast.quarter}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, quarter: e.target.value })
-          }
-          placeholder="Quarter (e.g., Q1 2024)"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newForecast.revenue}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, revenue: e.target.value })
-          }
-          placeholder="Revenue Forecast"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newForecast.growth}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, growth: e.target.value })
-          }
-          placeholder="Growth % Expected"
-          className={inputClasses}
-        />
-        <select
-          value={newForecast.confidence}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, confidence: e.target.value })
-          }
-          className={inputClasses}
-        >
-          <option>High</option>
-          <option>Medium</option>
-          <option>Low</option>
-        </select>
-        <input
-          type="text"
-          value={newForecast.notes}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, notes: e.target.value })
-          }
-          placeholder="Notes"
-          className={inputClasses}
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#7FE37F] text-white p-2 rounded hover:bg-[#5AD35A] transition-colors"
-        >
-          Add Forecast
-        </button>
-      </form>
-      <div className="space-y-3">
-        {forecasts.map((forecast) => (
-          <div
-            key={forecast.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#B8F3B8]"
-          >
-            {editingId === forecast.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`forecast-quarter-${forecast.id}`}
-                  type="text"
-                  defaultValue={forecast.quarter}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`forecast-revenue-${forecast.id}`}
-                  type="number"
-                  defaultValue={forecast.revenue}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`forecast-growth-${forecast.id}`}
-                  type="number"
-                  defaultValue={forecast.growth}
-                  className={editInputClasses}
-                />
-                <select
-                  id={`forecast-confidence-${forecast.id}`}
-                  defaultValue={forecast.confidence}
-                  className={editInputClasses}
-                >
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
-                <input
-                  id={`forecast-notes-${forecast.id}`}
-                  type="text"
-                  defaultValue={forecast.notes}
-                  className={editInputClasses}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-black">{forecast.quarter}</div>
-                <div className="text-sm text-black">
-                  Revenue: ${forecast.revenue.toLocaleString()} | Growth:{" "}
-                  {forecast.growth}%
-                </div>
-                <div className="text-sm text-black">
-                  Confidence: {forecast.confidence}
-                </div>
-                <div className="text-sm text-black">
-                  Notes: {forecast.notes}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === forecast.id ? (
-                <button
-                  onClick={() => handleSave(forecast.id)}
-                  className="text-[#7FE37F] hover:text-[#5AD35A]"
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(forecast)}
-                  className="text-[#7FE37F] hover:text-[#5AD35A]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(forecast.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-4xl font-bold bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+          🔑 Permission Management
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
+          View all roles and their permissions
+        </p>
       </div>
-    </div>
-  );
-}
-
-function ExpenseForecastBox() {
-  const [forecasts, setForecasts] = useState([
-    {
-      id: 1,
-      category: "Operating Expenses",
-      quarter: "Q1 2024",
-      amount: 180000,
-      trend: "Stable",
-      notes: "Regular operational costs",
-    },
-    {
-      id: 2,
-      category: "Marketing",
-      quarter: "Q1 2024",
-      amount: 45000,
-      trend: "Increasing",
-      notes: "New campaign planned",
-    },
-    {
-      id: 3,
-      category: "R&D",
-      quarter: "Q1 2024",
-      amount: 75000,
-      trend: "Increasing",
-      notes: "Product innovation investment",
-    },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [newForecast, setNewForecast] = useState({
-    category: "",
-    quarter: "",
-    amount: "",
-    trend: "Stable",
-    notes: "",
-  });
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newForecast.category || !newForecast.quarter || !newForecast.amount)
-      return;
-
-    const forecast = {
-      id: Date.now(),
-      ...newForecast,
-    };
-
-    setForecasts([...forecasts, forecast]);
-    setNewForecast({
-      category: "",
-      quarter: "",
-      amount: "",
-      trend: "Stable",
-      notes: "",
-    });
-  };
-
-  const handleEdit = (forecast) => {
-    setEditingId(forecast.id);
-  };
-
-  const handleSave = (id) => {
-    setForecasts(
-      forecasts.map((f) =>
-        f.id === id
-          ? {
-              ...f,
-              category: document.getElementById(`expense-category-${id}`).value,
-              quarter: document.getElementById(`expense-quarter-${id}`).value,
-              amount: Number(
-                document.getElementById(`expense-amount-${id}`).value
-              ),
-              trend: document.getElementById(`expense-trend-${id}`).value,
-              notes: document.getElementById(`expense-notes-${id}`).value,
-            }
-          : f
-      )
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setForecasts(forecasts.filter((f) => f.id !== id));
-  };
-
-  return (
-    <div className="bg-gradient-to-br from-[#E6E6FF] to-[#F0F0FF] p-6 rounded-lg shadow-md border border-[#B8B8F3] mt-6">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Expense Forecasts
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newForecast.category}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, category: e.target.value })
-          }
-          placeholder="Expense Category"
-          className="w-full p-2 rounded border border-[#B8B8F3] focus:outline-none focus:border-[#7F7FE3]"
-        />
-        <input
-          type="text"
-          value={newForecast.quarter}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, quarter: e.target.value })
-          }
-          placeholder="Quarter (e.g., Q1 2024)"
-          className="w-full p-2 rounded border border-[#B8B8F3] focus:outline-none focus:border-[#7F7FE3]"
-        />
-        <input
-          type="number"
-          value={newForecast.amount}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, amount: e.target.value })
-          }
-          placeholder="Amount"
-          className="w-full p-2 rounded border border-[#B8B8F3] focus:outline-none focus:border-[#7F7FE3]"
-        />
-        <select
-          value={newForecast.trend}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, trend: e.target.value })
-          }
-          className="w-full p-2 rounded border border-[#B8B8F3] focus:outline-none focus:border-[#7F7FE3]"
-        >
-          <option>Increasing</option>
-          <option>Stable</option>
-          <option>Decreasing</option>
-        </select>
-        <input
-          type="text"
-          value={newForecast.notes}
-          onChange={(e) =>
-            setNewForecast({ ...newForecast, notes: e.target.value })
-          }
-          placeholder="Notes"
-          className="w-full p-2 rounded border border-[#B8B8F3] focus:outline-none focus:border-[#7F7FE3]"
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#7F7FE3] text-white p-2 rounded hover:bg-[#5A5AD3] transition-colors"
-        >
-          Add Forecast
-        </button>
-      </form>
-      <div className="space-y-3">
-        {forecasts.map((forecast) => (
-          <div
-            key={forecast.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#B8B8F3]"
-          >
-            {editingId === forecast.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`expense-category-${forecast.id}`}
-                  type="text"
-                  defaultValue={forecast.category}
-                  className="w-full p-1 rounded border border-[#B8B8F3]"
-                />
-                <input
-                  id={`expense-quarter-${forecast.id}`}
-                  type="text"
-                  defaultValue={forecast.quarter}
-                  className="w-full p-1 rounded border border-[#B8B8F3]"
-                />
-                <input
-                  id={`expense-amount-${forecast.id}`}
-                  type="number"
-                  defaultValue={forecast.amount}
-                  className="w-full p-1 rounded border border-[#B8B8F3]"
-                />
-                <select
-                  id={`expense-trend-${forecast.id}`}
-                  defaultValue={forecast.trend}
-                  className="w-full p-1 rounded border border-[#B8B8F3]"
-                >
-                  <option>Increasing</option>
-                  <option>Stable</option>
-                  <option>Decreasing</option>
-                </select>
-                <input
-                  id={`expense-notes-${forecast.id}`}
-                  type="text"
-                  defaultValue={forecast.notes}
-                  className="w-full p-1 rounded border border-[#B8B8F3]"
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-gray-800">
-                  {forecast.category}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Quarter: {forecast.quarter} | Amount: $
-                  {forecast.amount.toLocaleString()}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Trend: {forecast.trend}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Notes: {forecast.notes}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === forecast.id ? (
-                <button
-                  onClick={() => handleSave(forecast.id)}
-                  className="text-[#7F7FE3] hover:text-[#5A5AD3]"
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(forecast)}
-                  className="text-[#7F7FE3] hover:text-[#5A5AD3]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(forecast.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* Permission structure note */}
+      <div className="mb-4 text-sm text-blue-700 bg-blue-50 dark:bg-blue-900 dark:text-blue-200 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+        <strong>Note:</strong> <span className="font-medium">Admin</span> has{" "}
+        <span className="font-bold">all permissions</span> (full access). Other
+        roles have only the permissions relevant to their responsibilities.
       </div>
-    </div>
-  );
-}
-
-function ExpenseBudgetBox() {
-  const [budgets, setBudgets] = useState([
-    {
-      id: 1,
-      category: "Marketing",
-      allocated: 45000,
-      spent: 38000,
-      remaining: 7000,
-      status: "On Track",
-      notes: "Q1 digital marketing campaigns",
-    },
-    {
-      id: 2,
-      category: "Operations",
-      allocated: 75000,
-      spent: 65000,
-      remaining: 10000,
-      status: "Under Budget",
-      notes: "Office maintenance and supplies",
-    },
-    {
-      id: 3,
-      category: "R&D",
-      allocated: 120000,
-      spent: 125000,
-      remaining: -5000,
-      status: "Over Budget",
-      notes: "New product development phase",
-    },
-  ]);
-
-  const [editingId, setEditingId] = useState(null);
-  const [newBudget, setNewBudget] = useState({
-    category: "",
-    allocated: "",
-    spent: "",
-    remaining: "",
-    status: "On Track",
-    notes: "",
-  });
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newBudget.category || !newBudget.allocated) return;
-
-    const budget = {
-      id: Date.now(),
-      ...newBudget,
-      remaining: Number(newBudget.allocated) - Number(newBudget.spent || 0),
-    };
-
-    setBudgets([...budgets, budget]);
-    setNewBudget({
-      category: "",
-      allocated: "",
-      spent: "",
-      remaining: "",
-      status: "On Track",
-      notes: "",
-    });
-  };
-
-  const handleEdit = (budget) => {
-    setEditingId(budget.id);
-  };
-
-  const handleSave = (id) => {
-    setBudgets(
-      budgets.map((b) =>
-        b.id === id
-          ? {
-              ...b,
-              category: document.getElementById(`budget-category-${id}`).value,
-              allocated: Number(
-                document.getElementById(`budget-allocated-${id}`).value
-              ),
-              spent: Number(
-                document.getElementById(`budget-spent-${id}`).value
-              ),
-              remaining:
-                Number(
-                  document.getElementById(`budget-allocated-${id}`).value
-                ) - Number(document.getElementById(`budget-spent-${id}`).value),
-              status: document.getElementById(`budget-status-${id}`).value,
-              notes: document.getElementById(`budget-notes-${id}`).value,
-            }
-          : b
-      )
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setBudgets(budgets.filter((b) => b.id !== id));
-  };
-
-  const inputClasses =
-    "w-full p-2 rounded border border-[#B8B8F3] focus:outline-none focus:border-[#7F7FE3] text-black placeholder-gray-500";
-  const editInputClasses =
-    "w-full p-1 rounded border border-[#B8B8F3] text-black";
-
-  return (
-    <div className="bg-gradient-to-br from-[#E6E6FF] to-[#F0F0FF] p-6 rounded-lg shadow-md border border-[#B8B8F3]">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Expense Budgets
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newBudget.category}
-          onChange={(e) =>
-            setNewBudget({ ...newBudget, category: e.target.value })
-          }
-          placeholder="Budget Category"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newBudget.allocated}
-          onChange={(e) =>
-            setNewBudget({ ...newBudget, allocated: e.target.value })
-          }
-          placeholder="Allocated Budget"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newBudget.spent}
-          onChange={(e) =>
-            setNewBudget({ ...newBudget, spent: e.target.value })
-          }
-          placeholder="Amount Spent"
-          className={inputClasses}
-        />
-        <select
-          value={newBudget.status}
-          onChange={(e) =>
-            setNewBudget({ ...newBudget, status: e.target.value })
-          }
-          className={inputClasses}
-        >
-          <option>On Track</option>
-          <option>Under Budget</option>
-          <option>Over Budget</option>
-        </select>
-        <input
-          type="text"
-          value={newBudget.notes}
-          onChange={(e) =>
-            setNewBudget({ ...newBudget, notes: e.target.value })
-          }
-          placeholder="Notes"
-          className={inputClasses}
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#7F7FE3] text-white p-2 rounded hover:bg-[#5A5AD3] transition-colors"
-        >
-          Add Budget
-        </button>
-      </form>
-      <div className="space-y-3">
-        {budgets.map((budget) => (
-          <div
-            key={budget.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#B8B8F3]"
-          >
-            {editingId === budget.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`budget-category-${budget.id}`}
-                  type="text"
-                  defaultValue={budget.category}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`budget-allocated-${budget.id}`}
-                  type="number"
-                  defaultValue={budget.allocated}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`budget-spent-${budget.id}`}
-                  type="number"
-                  defaultValue={budget.spent}
-                  className={editInputClasses}
-                />
-                <select
-                  id={`budget-status-${budget.id}`}
-                  defaultValue={budget.status}
-                  className={editInputClasses}
-                >
-                  <option>On Track</option>
-                  <option>Under Budget</option>
-                  <option>Over Budget</option>
-                </select>
-                <input
-                  id={`budget-notes-${budget.id}`}
-                  type="text"
-                  defaultValue={budget.notes}
-                  className={editInputClasses}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-black">{budget.category}</div>
-                <div className="text-sm text-black">
-                  Allocated: ${budget.allocated.toLocaleString()} | Spent: $
-                  {budget.spent.toLocaleString()}
-                </div>
-                <div className="text-sm text-black">
-                  Remaining: ${budget.remaining.toLocaleString()} | Status:{" "}
-                  {budget.status}
-                </div>
-                <div className="text-sm text-black">Notes: {budget.notes}</div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === budget.id ? (
-                <button
-                  onClick={() => handleSave(budget.id)}
-                  className="text-[#7F7FE3] hover:text-[#5A5AD3]"
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(budget)}
-                  className="text-[#7F7FE3] hover:text-[#5A5AD3]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(budget.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
+      <div className="overflow-x-auto">
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">
+            Loading roles and permissions...
           </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FinancialReportBox() {
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      period: "January 2024",
-      revenue: 320000,
-      expenses: 280000,
-      profit: 40000,
-      margin: 12.5,
-      highlights: "Strong SaaS revenue growth",
-    },
-    {
-      id: 2,
-      period: "February 2024",
-      revenue: 350000,
-      expenses: 295000,
-      profit: 55000,
-      margin: 15.7,
-      highlights: "Cost optimization initiatives successful",
-    },
-    {
-      id: 3,
-      period: "March 2024",
-      revenue: 380000,
-      expenses: 310000,
-      profit: 70000,
-      margin: 18.4,
-      highlights: "New market expansion impact",
-    },
-  ]);
-
-  const [editingId, setEditingId] = useState(null);
-  const [newReport, setNewReport] = useState({
-    period: "",
-    revenue: "",
-    expenses: "",
-    profit: "",
-    margin: "",
-    highlights: "",
-  });
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newReport.period || !newReport.revenue || !newReport.expenses) return;
-
-    const profit = Number(newReport.revenue) - Number(newReport.expenses);
-    const margin = (profit / Number(newReport.revenue)) * 100;
-
-    const report = {
-      id: Date.now(),
-      ...newReport,
-      profit,
-      margin: Number(margin.toFixed(1)),
-    };
-
-    setReports([...reports, report]);
-    setNewReport({
-      period: "",
-      revenue: "",
-      expenses: "",
-      profit: "",
-      margin: "",
-      highlights: "",
-    });
-  };
-
-  const handleEdit = (report) => {
-    setEditingId(report.id);
-  };
-
-  const handleSave = (id) => {
-    setReports(
-      reports.map((r) => {
-        if (r.id === id) {
-          const revenue = Number(
-            document.getElementById(`report-revenue-${id}`).value
-          );
-          const expenses = Number(
-            document.getElementById(`report-expenses-${id}`).value
-          );
-          const profit = revenue - expenses;
-          const margin = (profit / revenue) * 100;
-
-          return {
-            ...r,
-            period: document.getElementById(`report-period-${id}`).value,
-            revenue,
-            expenses,
-            profit,
-            margin: Number(margin.toFixed(1)),
-            highlights: document.getElementById(`report-highlights-${id}`)
-              .value,
-          };
-        }
-        return r;
-      })
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setReports(reports.filter((r) => r.id !== id));
-  };
-
-  const inputClasses =
-    "w-full p-2 rounded border border-[#F3B8F3] focus:outline-none focus:border-[#E37FE3] text-black placeholder-gray-500";
-  const editInputClasses =
-    "w-full p-1 rounded border border-[#F3B8F3] text-black";
-
-  return (
-    <div className="bg-gradient-to-br from-[#FFE6FF] to-[#FFF0FF] p-6 rounded-lg shadow-md border border-[#F3B8F3]">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Financial Reports
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newReport.period}
-          onChange={(e) =>
-            setNewReport({ ...newReport, period: e.target.value })
-          }
-          placeholder="Period (e.g., January 2024)"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newReport.revenue}
-          onChange={(e) =>
-            setNewReport({ ...newReport, revenue: e.target.value })
-          }
-          placeholder="Total Revenue"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newReport.expenses}
-          onChange={(e) =>
-            setNewReport({ ...newReport, expenses: e.target.value })
-          }
-          placeholder="Total Expenses"
-          className={inputClasses}
-        />
-        <input
-          type="text"
-          value={newReport.highlights}
-          onChange={(e) =>
-            setNewReport({ ...newReport, highlights: e.target.value })
-          }
-          placeholder="Key Highlights"
-          className={inputClasses}
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#E37FE3] text-white p-2 rounded hover:bg-[#D35AD3] transition-colors"
-        >
-          Add Report
-        </button>
-      </form>
-      <div className="space-y-3">
-        {reports.map((report) => (
-          <div
-            key={report.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#F3B8F3]"
-          >
-            {editingId === report.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`report-period-${report.id}`}
-                  type="text"
-                  defaultValue={report.period}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`report-revenue-${report.id}`}
-                  type="number"
-                  defaultValue={report.revenue}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`report-expenses-${report.id}`}
-                  type="number"
-                  defaultValue={report.expenses}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`report-highlights-${report.id}`}
-                  type="text"
-                  defaultValue={report.highlights}
-                  className={editInputClasses}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-black">{report.period}</div>
-                <div className="text-sm text-black">
-                  Revenue: ${report.revenue.toLocaleString()} | Expenses: $
-                  {report.expenses.toLocaleString()}
-                </div>
-                <div className="text-sm text-black">
-                  Profit: ${report.profit.toLocaleString()} | Margin:{" "}
-                  {report.margin}%
-                </div>
-                <div className="text-sm text-black">
-                  Highlights: {report.highlights}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === report.id ? (
-                <button
-                  onClick={() => handleSave(report.id)}
-                  className="text-[#E37FE3] hover:text-[#D35AD3]"
+        ) : (
+          <table className="w-full table-auto border-collapse border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
+            <thead className="bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900">
+              <tr>
+                <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                  Role
+                </th>
+                <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                  Permissions
+                </th>
+                <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                  Description
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayRoles.map((perm) => (
+                <tr
+                  key={perm.role}
+                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(report)}
-                  className="text-[#E37FE3] hover:text-[#D35AD3]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(report.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TeamManagementBox() {
-  const [teams, setTeams] = useState([
-    {
-      id: 1,
-      name: "Frontend Team",
-      members: 5,
-      lead: "Sarah Johnson",
-      projects: 3,
-      status: "Active",
-      notes: "Working on UI/UX improvements",
-    },
-    {
-      id: 2,
-      name: "Backend Team",
-      members: 4,
-      lead: "Michael Chen",
-      projects: 2,
-      status: "Active",
-      notes: "API development and optimization",
-    },
-    {
-      id: 3,
-      name: "QA Team",
-      members: 3,
-      lead: "Emily Rodriguez",
-      projects: 4,
-      status: "Active",
-      notes: "Testing new features",
-    },
-  ]);
-
-  const [editingId, setEditingId] = useState(null);
-  const [newTeam, setNewTeam] = useState({
-    name: "",
-    members: "",
-    lead: "",
-    projects: "",
-    status: "Active",
-    notes: "",
-  });
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newTeam.name || !newTeam.lead) return;
-
-    const team = {
-      id: Date.now(),
-      ...newTeam,
-    };
-
-    setTeams([...teams, team]);
-    setNewTeam({
-      name: "",
-      members: "",
-      lead: "",
-      projects: "",
-      status: "Active",
-      notes: "",
-    });
-  };
-
-  const handleEdit = (team) => {
-    setEditingId(team.id);
-  };
-
-  const handleSave = (id) => {
-    setTeams(
-      teams.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              name: document.getElementById(`team-name-${id}`).value,
-              members: Number(
-                document.getElementById(`team-members-${id}`).value
-              ),
-              lead: document.getElementById(`team-lead-${id}`).value,
-              projects: Number(
-                document.getElementById(`team-projects-${id}`).value
-              ),
-              status: document.getElementById(`team-status-${id}`).value,
-              notes: document.getElementById(`team-notes-${id}`).value,
-            }
-          : t
-      )
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setTeams(teams.filter((t) => t.id !== id));
-  };
-
-  const inputClasses =
-    "w-full p-2 rounded border border-[#B8E3F3] focus:outline-none focus:border-[#7FCAE3] text-black placeholder-gray-500";
-  const editInputClasses =
-    "w-full p-1 rounded border border-[#B8E3F3] text-black";
-
-  return (
-    <div className="bg-gradient-to-br from-[#E6F5FF] to-[#F0FAFF] p-6 rounded-lg shadow-md border border-[#B8E3F3]">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Team Management
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newTeam.name}
-          onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-          placeholder="Team Name"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newTeam.members}
-          onChange={(e) => setNewTeam({ ...newTeam, members: e.target.value })}
-          placeholder="Number of Members"
-          className={inputClasses}
-        />
-        <input
-          type="text"
-          value={newTeam.lead}
-          onChange={(e) => setNewTeam({ ...newTeam, lead: e.target.value })}
-          placeholder="Team Lead"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newTeam.projects}
-          onChange={(e) => setNewTeam({ ...newTeam, projects: e.target.value })}
-          placeholder="Number of Projects"
-          className={inputClasses}
-        />
-        <select
-          value={newTeam.status}
-          onChange={(e) => setNewTeam({ ...newTeam, status: e.target.value })}
-          className={inputClasses}
-        >
-          <option>Active</option>
-          <option>On Hold</option>
-          <option>Completed</option>
-        </select>
-        <input
-          type="text"
-          value={newTeam.notes}
-          onChange={(e) => setNewTeam({ ...newTeam, notes: e.target.value })}
-          placeholder="Notes"
-          className={inputClasses}
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#7FCAE3] text-white p-2 rounded hover:bg-[#5AB7D3] transition-colors"
-        >
-          Add Team
-        </button>
-      </form>
-      <div className="space-y-3">
-        {teams.map((team) => (
-          <div
-            key={team.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#B8E3F3]"
-          >
-            {editingId === team.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`team-name-${team.id}`}
-                  type="text"
-                  defaultValue={team.name}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`team-members-${team.id}`}
-                  type="number"
-                  defaultValue={team.members}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`team-lead-${team.id}`}
-                  type="text"
-                  defaultValue={team.lead}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`team-projects-${team.id}`}
-                  type="number"
-                  defaultValue={team.projects}
-                  className={editInputClasses}
-                />
-                <select
-                  id={`team-status-${team.id}`}
-                  defaultValue={team.status}
-                  className={editInputClasses}
-                >
-                  <option>Active</option>
-                  <option>On Hold</option>
-                  <option>Completed</option>
-                </select>
-                <input
-                  id={`team-notes-${team.id}`}
-                  type="text"
-                  defaultValue={team.notes}
-                  className={editInputClasses}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-black">{team.name}</div>
-                <div className="text-sm text-black">
-                  Members: {team.members} | Lead: {team.lead}
-                </div>
-                <div className="text-sm text-black">
-                  Projects: {team.projects} | Status: {team.status}
-                </div>
-                <div className="text-sm text-black">Notes: {team.notes}</div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === team.id ? (
-                <button
-                  onClick={() => handleSave(team.id)}
-                  className="text-[#7FCAE3] hover:text-[#5AB7D3]"
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(team)}
-                  className="text-[#7FCAE3] hover:text-[#5AB7D3]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(team.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ProjectTimelineBox() {
-  const [milestones, setMilestones] = useState([
-    {
-      id: 1,
-      phase: "Planning",
-      startDate: "2024-03-01",
-      endDate: "2024-03-15",
-      progress: 100,
-      status: "Completed",
-      deliverables: "Project scope and requirements",
-    },
-    {
-      id: 2,
-      phase: "Design",
-      startDate: "2024-03-16",
-      endDate: "2024-03-31",
-      progress: 75,
-      status: "In Progress",
-      deliverables: "UI/UX mockups and prototypes",
-    },
-    {
-      id: 3,
-      phase: "Development",
-      startDate: "2024-04-01",
-      endDate: "2024-04-30",
-      progress: 25,
-      status: "In Progress",
-      deliverables: "Core functionality implementation",
-    },
-  ]);
-
-  const [editingId, setEditingId] = useState(null);
-  const [newMilestone, setNewMilestone] = useState({
-    phase: "",
-    startDate: "",
-    endDate: "",
-    progress: "",
-    status: "Not Started",
-    deliverables: "",
-  });
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newMilestone.phase || !newMilestone.startDate || !newMilestone.endDate)
-      return;
-
-    const milestone = {
-      id: Date.now(),
-      ...newMilestone,
-    };
-
-    setMilestones([...milestones, milestone]);
-    setNewMilestone({
-      phase: "",
-      startDate: "",
-      endDate: "",
-      progress: "",
-      status: "Not Started",
-      deliverables: "",
-    });
-  };
-
-  const handleEdit = (milestone) => {
-    setEditingId(milestone.id);
-  };
-
-  const handleSave = (id) => {
-    setMilestones(
-      milestones.map((m) =>
-        m.id === id
-          ? {
-              ...m,
-              phase: document.getElementById(`milestone-phase-${id}`).value,
-              startDate: document.getElementById(`milestone-startDate-${id}`)
-                .value,
-              endDate: document.getElementById(`milestone-endDate-${id}`).value,
-              progress: Number(
-                document.getElementById(`milestone-progress-${id}`).value
-              ),
-              status: document.getElementById(`milestone-status-${id}`).value,
-              deliverables: document.getElementById(
-                `milestone-deliverables-${id}`
-              ).value,
-            }
-          : m
-      )
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setMilestones(milestones.filter((m) => m.id !== id));
-  };
-
-  const inputClasses =
-    "w-full p-2 rounded border border-[#F3B8B8] focus:outline-none focus:border-[#E37F7F] text-black placeholder-gray-500";
-  const editInputClasses =
-    "w-full p-1 rounded border border-[#F3B8B8] text-black";
-
-  return (
-    <div className="bg-gradient-to-br from-[#FFE6E6] to-[#FFF0F0] p-6 rounded-lg shadow-md border border-[#F3B8B8]">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Project Timeline
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newMilestone.phase}
-          onChange={(e) =>
-            setNewMilestone({ ...newMilestone, phase: e.target.value })
-          }
-          placeholder="Phase Name"
-          className={inputClasses}
-        />
-        <input
-          type="date"
-          value={newMilestone.startDate}
-          onChange={(e) =>
-            setNewMilestone({ ...newMilestone, startDate: e.target.value })
-          }
-          className={inputClasses}
-        />
-        <input
-          type="date"
-          value={newMilestone.endDate}
-          onChange={(e) =>
-            setNewMilestone({ ...newMilestone, endDate: e.target.value })
-          }
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newMilestone.progress}
-          onChange={(e) =>
-            setNewMilestone({ ...newMilestone, progress: e.target.value })
-          }
-          placeholder="Progress (%)"
-          min="0"
-          max="100"
-          className={inputClasses}
-        />
-        <select
-          value={newMilestone.status}
-          onChange={(e) =>
-            setNewMilestone({ ...newMilestone, status: e.target.value })
-          }
-          className={inputClasses}
-        >
-          <option>Not Started</option>
-          <option>In Progress</option>
-          <option>Completed</option>
-          <option>Delayed</option>
-        </select>
-        <input
-          type="text"
-          value={newMilestone.deliverables}
-          onChange={(e) =>
-            setNewMilestone({ ...newMilestone, deliverables: e.target.value })
-          }
-          placeholder="Deliverables"
-          className={inputClasses}
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#E37F7F] text-white p-2 rounded hover:bg-[#D35A5A] transition-colors"
-        >
-          Add Milestone
-        </button>
-      </form>
-      <div className="space-y-3">
-        {milestones.map((milestone) => (
-          <div
-            key={milestone.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#F3B8B8]"
-          >
-            {editingId === milestone.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`milestone-phase-${milestone.id}`}
-                  type="text"
-                  defaultValue={milestone.phase}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`milestone-startDate-${milestone.id}`}
-                  type="date"
-                  defaultValue={milestone.startDate}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`milestone-endDate-${milestone.id}`}
-                  type="date"
-                  defaultValue={milestone.endDate}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`milestone-progress-${milestone.id}`}
-                  type="number"
-                  defaultValue={milestone.progress}
-                  min="0"
-                  max="100"
-                  className={editInputClasses}
-                />
-                <select
-                  id={`milestone-status-${milestone.id}`}
-                  defaultValue={milestone.status}
-                  className={editInputClasses}
-                >
-                  <option>Not Started</option>
-                  <option>In Progress</option>
-                  <option>Completed</option>
-                  <option>Delayed</option>
-                </select>
-                <input
-                  id={`milestone-deliverables-${milestone.id}`}
-                  type="text"
-                  defaultValue={milestone.deliverables}
-                  className={editInputClasses}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-black">{milestone.phase}</div>
-                <div className="text-sm text-black">
-                  Duration: {milestone.startDate} to {milestone.endDate}
-                </div>
-                <div className="text-sm text-black">
-                  Progress: {milestone.progress}% | Status: {milestone.status}
-                </div>
-                <div className="text-sm text-black">
-                  Deliverables: {milestone.deliverables}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === milestone.id ? (
-                <button
-                  onClick={() => handleSave(milestone.id)}
-                  className="text-[#E37F7F] hover:text-[#D35A5A]"
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(milestone)}
-                  className="text-[#E37F7F] hover:text-[#D35A5A]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(milestone.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ProjectReportsBox() {
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      title: "Sprint Review Report",
-      date: "2024-03-15",
-      type: "Progress",
-      status: "Completed",
-      metrics: "Velocity: 85, Bugs: 12, Features: 8",
-      summary: "Successfully completed all planned features",
-    },
-    {
-      id: 2,
-      title: "Resource Allocation Report",
-      date: "2024-03-20",
-      type: "Resource",
-      status: "In Progress",
-      metrics: "Utilization: 78%, Cost: $45K",
-      summary: "Team capacity optimization needed",
-    },
-    {
-      id: 3,
-      title: "Quality Metrics Report",
-      date: "2024-03-25",
-      type: "Quality",
-      status: "Pending",
-      metrics: "Coverage: 92%, Issues: 15",
-      summary: "Code quality improvements required",
-    },
-  ]);
-
-  const [editingId, setEditingId] = useState(null);
-  const [newReport, setNewReport] = useState({
-    title: "",
-    date: "",
-    type: "Progress",
-    status: "Pending",
-    metrics: "",
-    summary: "",
-  });
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newReport.title || !newReport.date) return;
-
-    const report = {
-      id: Date.now(),
-      ...newReport,
-    };
-
-    setReports([...reports, report]);
-    setNewReport({
-      title: "",
-      date: "",
-      type: "Progress",
-      status: "Pending",
-      metrics: "",
-      summary: "",
-    });
-  };
-
-  const handleEdit = (report) => {
-    setEditingId(report.id);
-  };
-
-  const handleSave = (id) => {
-    setReports(
-      reports.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              title: document.getElementById(`report-title-${id}`).value,
-              date: document.getElementById(`report-date-${id}`).value,
-              type: document.getElementById(`report-type-${id}`).value,
-              status: document.getElementById(`report-status-${id}`).value,
-              metrics: document.getElementById(`report-metrics-${id}`).value,
-              summary: document.getElementById(`report-summary-${id}`).value,
-            }
-          : r
-      )
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setReports(reports.filter((r) => r.id !== id));
-  };
-
-  const inputClasses =
-    "w-full p-2 rounded border border-[#F3B8F3] focus:outline-none focus:border-[#E37FE3] text-black placeholder-gray-500";
-  const editInputClasses =
-    "w-full p-1 rounded border border-[#F3B8F3] text-black";
-
-  return (
-    <div className="bg-gradient-to-br from-[#FFE6FF] to-[#FFF0FF] p-6 rounded-lg shadow-md border border-[#F3B8F3]">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Project Reports
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newReport.title}
-          onChange={(e) =>
-            setNewReport({ ...newReport, title: e.target.value })
-          }
-          placeholder="Report Title"
-          className={inputClasses}
-        />
-        <input
-          type="date"
-          value={newReport.date}
-          onChange={(e) => setNewReport({ ...newReport, date: e.target.value })}
-          className={inputClasses}
-        />
-        <select
-          value={newReport.type}
-          onChange={(e) => setNewReport({ ...newReport, type: e.target.value })}
-          className={inputClasses}
-        >
-          <option>Progress</option>
-          <option>Resource</option>
-          <option>Quality</option>
-          <option>Financial</option>
-          <option>Risk</option>
-        </select>
-        <select
-          value={newReport.status}
-          onChange={(e) =>
-            setNewReport({ ...newReport, status: e.target.value })
-          }
-          className={inputClasses}
-        >
-          <option>Pending</option>
-          <option>In Progress</option>
-          <option>Completed</option>
-          <option>Reviewed</option>
-        </select>
-        <input
-          type="text"
-          value={newReport.metrics}
-          onChange={(e) =>
-            setNewReport({ ...newReport, metrics: e.target.value })
-          }
-          placeholder="Key Metrics"
-          className={inputClasses}
-        />
-        <textarea
-          value={newReport.summary}
-          onChange={(e) =>
-            setNewReport({ ...newReport, summary: e.target.value })
-          }
-          placeholder="Report Summary"
-          className={`${inputClasses} h-20 resize-none`}
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#E37FE3] text-white p-2 rounded hover:bg-[#D35AD3] transition-colors"
-        >
-          Add Report
-        </button>
-      </form>
-      <div className="space-y-3">
-        {reports.map((report) => (
-          <div
-            key={report.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#F3B8F3]"
-          >
-            {editingId === report.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`report-title-${report.id}`}
-                  type="text"
-                  defaultValue={report.title}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`report-date-${report.id}`}
-                  type="date"
-                  defaultValue={report.date}
-                  className={editInputClasses}
-                />
-                <select
-                  id={`report-type-${report.id}`}
-                  defaultValue={report.type}
-                  className={editInputClasses}
-                >
-                  <option>Progress</option>
-                  <option>Resource</option>
-                  <option>Quality</option>
-                  <option>Financial</option>
-                  <option>Risk</option>
-                </select>
-                <select
-                  id={`report-status-${report.id}`}
-                  defaultValue={report.status}
-                  className={editInputClasses}
-                >
-                  <option>Pending</option>
-                  <option>In Progress</option>
-                  <option>Completed</option>
-                  <option>Reviewed</option>
-                </select>
-                <input
-                  id={`report-metrics-${report.id}`}
-                  type="text"
-                  defaultValue={report.metrics}
-                  className={editInputClasses}
-                />
-                <textarea
-                  id={`report-summary-${report.id}`}
-                  defaultValue={report.summary}
-                  className={`${editInputClasses} h-20 resize-none`}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-black">{report.title}</div>
-                <div className="text-sm text-black">
-                  Date: {report.date} | Type: {report.type}
-                </div>
-                <div className="text-sm text-black">
-                  Status: {report.status}
-                </div>
-                <div className="text-sm text-black">
-                  Metrics: {report.metrics}
-                </div>
-                <div className="text-sm text-black">
-                  Summary: {report.summary}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === report.id ? (
-                <button
-                  onClick={() => handleSave(report.id)}
-                  className="text-[#E37FE3] hover:text-[#D35AD3]"
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(report)}
-                  className="text-[#E37FE3] hover:text-[#D35AD3]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(report.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ResourceManagementBox() {
-  const [resources, setResources] = useState([
-    {
-      id: 1,
-      name: "Development Team",
-      allocated: 120,
-      available: 160,
-      utilization: 75,
-      type: "Human",
-      notes: "Frontend and backend developers",
-    },
-    {
-      id: 2,
-      name: "Cloud Infrastructure",
-      allocated: 80,
-      available: 100,
-      utilization: 80,
-      type: "Technical",
-      notes: "AWS resources and services",
-    },
-    {
-      id: 3,
-      name: "Testing Equipment",
-      allocated: 40,
-      available: 50,
-      utilization: 80,
-      type: "Equipment",
-      notes: "QA testing devices and tools",
-    },
-  ]);
-
-  const [editingId, setEditingId] = useState(null);
-  const [newResource, setNewResource] = useState({
-    name: "",
-    allocated: "",
-    available: "",
-    utilization: "",
-    type: "Human",
-    notes: "",
-  });
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newResource.name || !newResource.available) return;
-
-    const utilization =
-      (Number(newResource.allocated) / Number(newResource.available)) * 100;
-
-    const resource = {
-      id: Date.now(),
-      ...newResource,
-      utilization: Number(utilization.toFixed(1)),
-    };
-
-    setResources([...resources, resource]);
-    setNewResource({
-      name: "",
-      allocated: "",
-      available: "",
-      utilization: "",
-      type: "Human",
-      notes: "",
-    });
-  };
-
-  const handleEdit = (resource) => {
-    setEditingId(resource.id);
-  };
-
-  const handleSave = (id) => {
-    setResources(
-      resources.map((r) => {
-        if (r.id === id) {
-          const allocated = Number(
-            document.getElementById(`resource-allocated-${id}`).value
-          );
-          const available = Number(
-            document.getElementById(`resource-available-${id}`).value
-          );
-          const utilization = (allocated / available) * 100;
-
-          return {
-            ...r,
-            name: document.getElementById(`resource-name-${id}`).value,
-            allocated,
-            available,
-            utilization: Number(utilization.toFixed(1)),
-            type: document.getElementById(`resource-type-${id}`).value,
-            notes: document.getElementById(`resource-notes-${id}`).value,
-          };
-        }
-        return r;
-      })
-    );
-    setEditingId(null);
-  };
-
-  const handleDelete = (id) => {
-    setResources(resources.filter((r) => r.id !== id));
-  };
-
-  const inputClasses =
-    "w-full p-2 rounded border border-[#B8F3B8] focus:outline-none focus:border-[#7FE37F] text-black placeholder-gray-500";
-  const editInputClasses =
-    "w-full p-1 rounded border border-[#B8F3B8] text-black";
-
-  return (
-    <div className="bg-gradient-to-br from-[#E6FFE6] to-[#F0FFF0] p-6 rounded-lg shadow-md border border-[#B8F3B8]">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800">
-        Resource Management
-      </h3>
-      <form onSubmit={handleAdd} className="mb-4 space-y-2">
-        <input
-          type="text"
-          value={newResource.name}
-          onChange={(e) =>
-            setNewResource({ ...newResource, name: e.target.value })
-          }
-          placeholder="Resource Name"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newResource.allocated}
-          onChange={(e) =>
-            setNewResource({ ...newResource, allocated: e.target.value })
-          }
-          placeholder="Allocated Hours/Units"
-          className={inputClasses}
-        />
-        <input
-          type="number"
-          value={newResource.available}
-          onChange={(e) =>
-            setNewResource({ ...newResource, available: e.target.value })
-          }
-          placeholder="Available Hours/Units"
-          className={inputClasses}
-        />
-        <select
-          value={newResource.type}
-          onChange={(e) =>
-            setNewResource({ ...newResource, type: e.target.value })
-          }
-          className={inputClasses}
-        >
-          <option>Human</option>
-          <option>Technical</option>
-          <option>Equipment</option>
-          <option>Financial</option>
-        </select>
-        <input
-          type="text"
-          value={newResource.notes}
-          onChange={(e) =>
-            setNewResource({ ...newResource, notes: e.target.value })
-          }
-          placeholder="Notes"
-          className={inputClasses}
-        />
-        <button
-          type="submit"
-          className="w-full bg-[#7FE37F] text-white p-2 rounded hover:bg-[#5AD35A] transition-colors"
-        >
-          Add Resource
-        </button>
-      </form>
-      <div className="space-y-3">
-        {resources.map((resource) => (
-          <div
-            key={resource.id}
-            className="flex items-center justify-between bg-white/60 p-3 rounded border border-[#B8F3B8]"
-          >
-            {editingId === resource.id ? (
-              <div className="flex-1 space-y-2">
-                <input
-                  id={`resource-name-${resource.id}`}
-                  type="text"
-                  defaultValue={resource.name}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`resource-allocated-${resource.id}`}
-                  type="number"
-                  defaultValue={resource.allocated}
-                  className={editInputClasses}
-                />
-                <input
-                  id={`resource-available-${resource.id}`}
-                  type="number"
-                  defaultValue={resource.available}
-                  className={editInputClasses}
-                />
-                <select
-                  id={`resource-type-${resource.id}`}
-                  defaultValue={resource.type}
-                  className={editInputClasses}
-                >
-                  <option>Human</option>
-                  <option>Technical</option>
-                  <option>Equipment</option>
-                  <option>Financial</option>
-                </select>
-                <input
-                  id={`resource-notes-${resource.id}`}
-                  type="text"
-                  defaultValue={resource.notes}
-                  className={editInputClasses}
-                />
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="font-medium text-black">{resource.name}</div>
-                <div className="text-sm text-black">
-                  Allocated: {resource.allocated} | Available:{" "}
-                  {resource.available}
-                </div>
-                <div className="text-sm text-black">
-                  Utilization: {resource.utilization}% | Type: {resource.type}
-                </div>
-                <div className="text-sm text-black">
-                  Notes: {resource.notes}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              {editingId === resource.id ? (
-                <button
-                  onClick={() => handleSave(resource.id)}
-                  className="text-[#7FE37F] hover:text-[#5AD35A]"
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleEdit(resource)}
-                  className="text-[#7FE37F] hover:text-[#5AD35A]"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => handleDelete(resource.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ResearchToolsBox has been moved to its own file at components/ResearchToolsBox.js
-
-// DraftArticlesBox has been moved to its own file
-
-// Add this new component at the bottom of the file:
-function EditableSEOInfoBox() {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      traffic: 12000,
-      backlinks: 350,
-      domainAuthority: 42,
-      topKeyword: "productivity app",
-    },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
-    traffic: "",
-    backlinks: "",
-    domainAuthority: "",
-    topKeyword: "",
-  });
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = () => {
-    setForm({
-      traffic: "",
-      backlinks: "",
-      domainAuthority: "",
-      topKeyword: "",
-    });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({
-      traffic: "",
-      backlinks: "",
-      domainAuthority: "",
-      topKeyword: "",
-    });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-blue-100 to-cyan-100 text-gray-900 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">SEO Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Traffic</label>
-              <input
-                type="number"
-                value={form.traffic}
-                onChange={(e) => setForm({ ...form, traffic: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Backlinks</label>
-              <input
-                type="number"
-                value={form.backlinks}
-                onChange={(e) =>
-                  setForm({ ...form, backlinks: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">
-                Domain Authority
-              </label>
-              <input
-                type="number"
-                value={form.domainAuthority}
-                onChange={(e) =>
-                  setForm({ ...form, domainAuthority: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Top Keyword</label>
-              <input
-                type="text"
-                value={form.topKeyword}
-                onChange={(e) =>
-                  setForm({ ...form, topKeyword: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
+                  <td className="px-6 py-4 text-gray-800 dark:text-gray-200 font-bold">
+                    {perm.role}
+                  </td>
+                  <td className="px-6 py-4">
+                    {perm.role === "admin" ? (
+                      <span className="px-3 py-1 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 dark:from-green-900 dark:to-blue-900 dark:text-green-200 rounded-full text-xs font-medium shadow-sm">
+                        All Permissions
+                      </span>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {perm.permissions.map((p) => (
+                          <span
+                            key={p}
+                            className="px-3 py-1 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 dark:from-green-900 dark:to-blue-900 dark:text-green-200 rounded-full text-xs font-medium shadow-sm"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
+                    {perm.description}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Traffic:</span> {item.traffic}
-            </div>
-            <div>
-              <span className="font-medium">Backlinks:</span> {item.backlinks}
-            </div>
-            <div>
-              <span className="font-medium">Domain Authority:</span>{" "}
-              {item.domainAuthority}
-            </div>
-            <div>
-              <span className="font-medium">Top Keyword:</span>{" "}
-              {item.topKeyword}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-cyan-500 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EditableSEOKeywordsBox() {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      keyword: "productivity app",
-      searchVolume: 5400,
-      competition: "Medium",
-      trend: "+12%",
-    },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
-    keyword: "",
-    searchVolume: "",
-    competition: "",
-    trend: "",
-  });
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = () => {
-    setForm({ keyword: "", searchVolume: "", competition: "", trend: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ keyword: "", searchVolume: "", competition: "", trend: "" });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 text-gray-900 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Keyword Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-yellow-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Keyword</label>
-              <input
-                type="text"
-                value={form.keyword}
-                onChange={(e) => setForm({ ...form, keyword: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Search Volume</label>
-              <input
-                type="number"
-                value={form.searchVolume}
-                onChange={(e) =>
-                  setForm({ ...form, searchVolume: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Competition</label>
-              <input
-                type="text"
-                value={form.competition}
-                onChange={(e) =>
-                  setForm({ ...form, competition: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Trend</label>
-              <input
-                type="text"
-                value={form.trend}
-                onChange={(e) => setForm({ ...form, trend: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Keyword:</span> {item.keyword}
-            </div>
-            <div>
-              <span className="font-medium">Search Volume:</span>{" "}
-              {item.searchVolume}
-            </div>
-            <div>
-              <span className="font-medium">Competition:</span>{" "}
-              {item.competition}
-            </div>
-            <div>
-              <span className="font-medium">Trend:</span> {item.trend}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-yellow-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EditableSEORankingsBox() {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      keyword: "productivity app",
-      currentRank: 3,
-      bestRank: 2,
-      url: "https://yourapp.com/productivity",
-    },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
-    keyword: "",
-    currentRank: "",
-    bestRank: "",
-    url: "",
-  });
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = () => {
-    setForm({ keyword: "", currentRank: "", bestRank: "", url: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ keyword: "", currentRank: "", bestRank: "", url: "" });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 text-gray-900 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Ranking Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-green-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Keyword</label>
-              <input
-                type="text"
-                value={form.keyword}
-                onChange={(e) => setForm({ ...form, keyword: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Current Rank</label>
-              <input
-                type="number"
-                value={form.currentRank}
-                onChange={(e) =>
-                  setForm({ ...form, currentRank: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Best Rank</label>
-              <input
-                type="number"
-                value={form.bestRank}
-                onChange={(e) => setForm({ ...form, bestRank: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">URL</label>
-              <input
-                type="text"
-                value={form.url}
-                onChange={(e) => setForm({ ...form, url: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-green-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Keyword:</span> {item.keyword}
-            </div>
-            <div>
-              <span className="font-medium">Current Rank:</span>{" "}
-              {item.currentRank}
-            </div>
-            <div>
-              <span className="font-medium">Best Rank:</span> {item.bestRank}
-            </div>
-            <div>
-              <span className="font-medium">URL:</span> {item.url}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-green-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EditableSEOContentBox() {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      title: "10 Productivity Tips",
-      wordCount: 1200,
-      status: "Published",
-      lastUpdated: "2024-06-01",
-    },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
-    title: "",
-    wordCount: "",
-    status: "",
-    lastUpdated: "",
-  });
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = () => {
-    setForm({ title: "", wordCount: "", status: "", lastUpdated: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ title: "", wordCount: "", status: "", lastUpdated: "" });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-pink-50 to-pink-100 text-gray-900 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Content Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-pink-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Title</label>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Word Count</label>
-              <input
-                type="number"
-                value={form.wordCount}
-                onChange={(e) =>
-                  setForm({ ...form, wordCount: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Status</label>
-              <input
-                type="text"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Last Updated</label>
-              <input
-                type="date"
-                value={form.lastUpdated}
-                onChange={(e) =>
-                  setForm({ ...form, lastUpdated: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-pink-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Title:</span> {item.title}
-            </div>
-            <div>
-              <span className="font-medium">Word Count:</span> {item.wordCount}
-            </div>
-            <div>
-              <span className="font-medium">Status:</span> {item.status}
-            </div>
-            <div>
-              <span className="font-medium">Last Updated:</span>{" "}
-              {item.lastUpdated}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-pink-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Add these new components at the bottom of the file:
-function EditableTeamInfoBox() {
-  const [items, setItems] = useState([
-    { id: 1, name: "Frontend Team", members: 5, lead: "Alice" },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", members: "", lead: "" });
-  const [adding, setAdding] = useState(false);
-  const handleAdd = () => {
-    setForm({ name: "", members: "", lead: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ name: "", members: "", lead: "" });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4">Team Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Team Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">
-                Number of Members
-              </label>
-              <input
-                type="number"
-                value={form.members}
-                onChange={(e) => setForm({ ...form, members: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Team Lead</label>
-              <input
-                type="text"
-                value={form.lead}
-                onChange={(e) => setForm({ ...form, lead: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Team Name:</span> {item.name}
-            </div>
-            <div>
-              <span className="font-medium">Number of Members:</span>{" "}
-              {item.members}
-            </div>
-            <div>
-              <span className="font-medium">Team Lead:</span> {item.lead}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-blue-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EditableTimelineInfoBox() {
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      milestone: "Design Complete",
-      due: "2024-06-10",
-      status: "On Track",
-    },
-  ]);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ milestone: "", due: "", status: "" });
-  const [adding, setAdding] = useState(false);
-  const handleAdd = () => {
-    setForm({ milestone: "", due: "", status: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ milestone: "", due: "", status: "" });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 text-gray-900 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4">Timeline Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-purple-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Milestone</label>
-              <input
-                type="text"
-                value={form.milestone}
-                onChange={(e) =>
-                  setForm({ ...form, milestone: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Due Date</label>
-              <input
-                type="date"
-                value={form.due}
-                onChange={(e) => setForm({ ...form, due: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Status</label>
-              <input
-                type="text"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-purple-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Milestone:</span> {item.milestone}
-            </div>
-            <div>
-              <span className="font-medium">Due Date:</span> {item.due}
-            </div>
-            <div>
-              <span className="font-medium">Status:</span> {item.status}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-purple-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EditableDeveloperNotesBox() {
-  const [notes, setNotes] = React.useState([
-    {
-      id: 1,
-      title: "Setup Instructions",
-      content: "Clone the repo and run npm install.",
-    },
-    { id: 2, title: "API Docs", content: "See /docs for API documentation." },
-  ]);
-  const [editingId, setEditingId] = React.useState(null);
-  const [form, setForm] = React.useState({ title: "", content: "" });
-  const [adding, setAdding] = React.useState(false);
-
-  const handleAdd = () => {
-    setForm({ title: "", content: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setNotes([...notes, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setNotes(notes.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ title: "", content: "" });
-  };
-  const handleDelete = (id) => {
-    setNotes(notes.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-yellow-100 to-green-100 text-gray-900 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4">Developer Notes (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-yellow-400 text-white px-4 py-2 rounded"
-      >
-        Add Note
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Title</label>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Content</label>
-              <textarea
-                value={form.content}
-                onChange={(e) => setForm({ ...form, content: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {notes.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Title:</span> {item.title}
-            </div>
-            <div>
-              <span className="font-medium">Content:</span> {item.content}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-yellow-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-// EditableResourceInfoBox: Editable CRUD box for project resources
-function EditableResourceInfoBox() {
-  const [items, setItems] = React.useState([
-    { id: 1, name: "Laptop", type: "Hardware", status: "Available" },
-    { id: 2, name: "Adobe License", type: "Software", status: "Assigned" },
-  ]);
-  const [editingId, setEditingId] = React.useState(null);
-  const [form, setForm] = React.useState({ name: "", type: "", status: "" });
-  const [adding, setAdding] = React.useState(false);
-
-  const handleAdd = () => {
-    setForm({ name: "", type: "", status: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ name: "", type: "", status: "" });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 text-gray-900 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4">Resource Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-green-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Resource Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Type</label>
-              <input
-                type="text"
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Status</label>
-              <input
-                type="text"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-green-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Resource Name:</span> {item.name}
-            </div>
-            <div>
-              <span className="font-medium">Type:</span> {item.type}
-            </div>
-            <div>
-              <span className="font-medium">Status:</span> {item.status}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-green-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// EditableReportInfoBox: Editable CRUD box for project reports
-function EditableReportInfoBox() {
-  const [items, setItems] = React.useState([
-    { id: 1, name: "Weekly Report", summary: "Progress and blockers" },
-    { id: 2, name: "Monthly Report", summary: "Milestones achieved" },
-  ]);
-  const [editingId, setEditingId] = React.useState(null);
-  const [form, setForm] = React.useState({ name: "", summary: "" });
-  const [adding, setAdding] = React.useState(false);
-
-  const handleAdd = () => {
-    setForm({ name: "", summary: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setItems([...items, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setItems(items.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ name: "", summary: "" });
-  };
-  const handleDelete = (id) => {
-    setItems(items.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-pink-50 to-pink-100 text-gray-900 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4">Report Info (Editable)</h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-pink-500 text-white px-4 py-2 rounded"
-      >
-        Add New
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Report Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Summary</label>
-              <input
-                type="text"
-                value={form.summary}
-                onChange={(e) => setForm({ ...form, summary: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-pink-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {items.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Report Name:</span> {item.name}
-            </div>
-            <div>
-              <span className="font-medium">Summary:</span> {item.summary}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-pink-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// EditableDevToolsBox: Editable CRUD box for developer tools
-function EditableDevToolsBox() {
-  const [tools, setTools] = React.useState([
-    { id: 1, name: "VS Code", description: "Primary code editor" },
-    { id: 2, name: "Postman", description: "API testing tool" },
-    { id: 3, name: "GitHub Desktop", description: "Git GUI client" },
-  ]);
-  const [editingId, setEditingId] = React.useState(null);
-  const [form, setForm] = React.useState({ name: "", description: "" });
-  const [adding, setAdding] = React.useState(false);
-
-  const handleAdd = () => {
-    setForm({ name: "", description: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setTools([...tools, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setTools(tools.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ name: "", description: "" });
-  };
-  const handleDelete = (id) => {
-    setTools(tools.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4 text-cyan-700">
-        Dev Tools (Editable)
-      </h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-cyan-500 text-white px-4 py-2 rounded"
-      >
-        Add Tool
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Tool Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Description</label>
-              <input
-                type="text"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-cyan-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {tools.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Tool Name:</span> {item.name}
-            </div>
-            <div>
-              <span className="font-medium">Description:</span>{" "}
-              {item.description}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-cyan-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// EditableDevDocsBox: Editable CRUD box for developer documentation info
-function EditableDevDocsBox() {
-  const [docs, setDocs] = React.useState([
-    {
-      id: 1,
-      title: "API Reference",
-      content: "See /docs/api for all endpoints.",
-    },
-    {
-      id: 2,
-      title: "Setup Guide",
-      content: "Clone the repo and run npm install.",
-    },
-  ]);
-  const [editingId, setEditingId] = React.useState(null);
-  const [form, setForm] = React.useState({ title: "", content: "" });
-  const [adding, setAdding] = React.useState(false);
-
-  const handleAdd = () => {
-    setForm({ title: "", content: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setDocs([...docs, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setDocs(docs.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ title: "", content: "" });
-  };
-  const handleDelete = (id) => {
-    setDocs(docs.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4 text-yellow-700">
-        Documentation Info (Editable)
-      </h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-yellow-500 text-white px-4 py-2 rounded"
-      >
-        Add Info
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Title</label>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Content</label>
-              <textarea
-                value={form.content}
-                onChange={(e) => setForm({ ...form, content: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {docs.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Title:</span> {item.title}
-            </div>
-            <div>
-              <span className="font-medium">Content:</span> {item.content}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-yellow-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Place this at the top-level, after imports and before any usage in JSX
-function EditableDeploymentInfoBox() {
-  const [deployments, setDeployments] = React.useState([
-    { id: 1, name: "Production", status: "Success", date: "2024-06-01" },
-    { id: 2, name: "Staging", status: "Failed", date: "2024-05-28" },
-  ]);
-  const [editingId, setEditingId] = React.useState(null);
-  const [form, setForm] = React.useState({ name: "", status: "", date: "" });
-  const [adding, setAdding] = React.useState(false);
-
-  const handleAdd = () => {
-    setForm({ name: "", status: "", date: "" });
-    setAdding(true);
-    setEditingId(null);
-  };
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditingId(item.id);
-    setAdding(false);
-  };
-  const handleSave = () => {
-    if (adding) {
-      setDeployments([...deployments, { ...form, id: Date.now() }]);
-      setAdding(false);
-    } else {
-      setDeployments(deployments.map((i) => (i.id === editingId ? form : i)));
-      setEditingId(null);
-    }
-    setForm({ name: "", status: "", date: "" });
-  };
-  const handleDelete = (id) => {
-    setDeployments(deployments.filter((i) => i.id !== id));
-    setEditingId(null);
-    setAdding(false);
-  };
-  return (
-    <div className="p-6 bg-gradient-to-br from-yellow-50 to-green-50 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4 text-yellow-700">
-        Deployment Info (Editable)
-      </h2>
-      <button
-        onClick={handleAdd}
-        className="mb-4 bg-yellow-500 text-white px-4 py-2 rounded"
-      >
-        Add Deployment
-      </button>
-      <div className="space-y-4">
-        {(adding || editingId) && (
-          <div className="space-y-2 border-b pb-4">
-            <div>
-              <label className="block text-sm font-medium">Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border rounded px-2 py-1 text-black"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Status</label>
-              <input
-                type="text"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full border rounded px-2 py-1 text-black"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Date</label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="w-full border rounded px-2 py-1 text-black"
-              />
-            </div>
-            <button
-              onClick={handleSave}
-              className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setEditingId(null);
-              }}
-              className="mt-2 ml-2 bg-gray-300 text-gray-800 px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {deployments.map((item) => (
-          <div key={item.id} className="space-y-2 border-b pb-4">
-            <div>
-              <span className="font-medium">Name:</span> {item.name}
-            </div>
-            <div>
-              <span className="font-medium">Status:</span> {item.status}
-            </div>
-            <div>
-              <span className="font-medium">Date:</span> {item.date}
-            </div>
-            <button
-              onClick={() => handleEdit(item)}
-              className="bg-yellow-400 text-white px-4 py-2 rounded mr-2"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="bg-red-400 text-white px-4 py-2 rounded"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
       </div>
     </div>
   );

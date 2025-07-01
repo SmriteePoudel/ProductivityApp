@@ -3,11 +3,44 @@
 import { useState, useEffect } from "react";
 
 export default function UserManager({ user, onClose, onUserUpdate }) {
+  const ALL_ROLES = [
+    { key: "admin", label: "Admin", desc: "Full system access", icon: "👑" },
+    { key: "user", label: "User", desc: "Regular user access", icon: "👤" },
+    {
+      key: "developer",
+      label: "Developer",
+      desc: "Developer tools",
+      icon: "💻",
+    },
+    { key: "designer", label: "Designer", desc: "Design tools", icon: "🎨" },
+    { key: "hr", label: "HR", desc: "HR dashboard", icon: "🧑‍💼" },
+    {
+      key: "marketing",
+      label: "Marketing",
+      desc: "Marketing dashboard",
+      icon: "📢",
+    },
+    { key: "finance", label: "Finance", desc: "Finance dashboard", icon: "💰" },
+    {
+      key: "blog_writer",
+      label: "Blog Writer",
+      desc: "Blog tools",
+      icon: "📝",
+    },
+    { key: "seo_manager", label: "SEO Manager", desc: "SEO tools", icon: "🔍" },
+    {
+      key: "project_manager",
+      label: "Project Manager",
+      desc: "Project management",
+      icon: "📁",
+    },
+  ];
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "user",
+    roles: ["user"],
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -18,7 +51,11 @@ export default function UserManager({ user, onClose, onUserUpdate }) {
         name: user.name || "",
         email: user.email || "",
         password: "",
-        role: user.role || "user",
+        roles: Array.isArray(user.roles)
+          ? user.roles
+          : user.role
+          ? [user.role]
+          : ["user"],
       });
     }
   }, [user]);
@@ -40,6 +77,10 @@ export default function UserManager({ user, onClose, onUserUpdate }) {
       newErrors.password = "Password is required";
     } else if (formData.password && formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
+    }
+
+    if (!formData.roles || formData.roles.length === 0) {
+      newErrors.roles = "At least one role must be selected";
     }
 
     setErrors(newErrors);
@@ -159,73 +200,50 @@ export default function UserManager({ user, onClose, onUserUpdate }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Role
+            Roles
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="relative">
-              <input
-                type="radio"
-                name="role"
-                value="user"
-                checked={formData.role === "user"}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
-                className="sr-only"
-              />
-              <div
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  formData.role === "user"
-                    ? "border-blue-400 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
+            {ALL_ROLES.map((role) => (
+              <label
+                key={role.key}
+                className="relative flex items-center gap-2 cursor-pointer p-2 border rounded-lg transition-all bg-white hover:bg-purple-50 border-gray-200 hover:border-purple-300"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center text-white">
-                    👤
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900">User</div>
-                    <div className="text-sm text-gray-500">
-                      Regular user access
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </label>
-
-            <label className="relative">
-              <input
-                type="radio"
-                name="role"
-                value="admin"
-                checked={formData.role === "admin"}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
-                className="sr-only"
-              />
-              <div
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  formData.role === "admin"
-                    ? "border-pink-400 bg-pink-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-pink-400 flex items-center justify-center text-white">
-                    👑
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900">Admin</div>
-                    <div className="text-sm text-gray-500">
-                      Full system access
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </label>
+                <input
+                  type="checkbox"
+                  name="roles"
+                  value={role.key}
+                  checked={formData.roles.includes(role.key)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData((prev) => {
+                      let newRoles = prev.roles || [];
+                      if (checked) {
+                        newRoles = [...newRoles, role.key];
+                      } else {
+                        newRoles = newRoles.filter((r) => r !== role.key);
+                      }
+                      return { ...prev, roles: newRoles };
+                    });
+                  }}
+                  className="accent-purple-500 w-5 h-5"
+                />
+                <span className="w-8 h-8 rounded-full flex items-center justify-center text-lg bg-purple-100">
+                  {role.icon}
+                </span>
+                <span>
+                  <span className="font-medium text-gray-900">
+                    {role.label}
+                  </span>
+                  <span className="block text-xs text-gray-500">
+                    {role.desc}
+                  </span>
+                </span>
+              </label>
+            ))}
           </div>
+          {errors.roles && (
+            <p className="text-red-500 text-sm mt-1">{errors.roles}</p>
+          )}
         </div>
 
         <div className="flex gap-3 pt-4">

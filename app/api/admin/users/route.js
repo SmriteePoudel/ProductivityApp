@@ -26,7 +26,7 @@ export async function POST(request) {
       );
     }
 
-    const { name, email, password, role = "user" } = await request.json();
+    const { name, email, password, roles } = await request.json();
 
     // Validate input
     if (!name || !email || !password) {
@@ -36,13 +36,35 @@ export async function POST(request) {
       );
     }
 
-    // Validate role
-    if (role && !["user", "admin"].includes(role)) {
-      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    // Validate roles
+    const validRoles = [
+      "user",
+      "admin",
+      "moderator",
+      "editor",
+      "viewer",
+      "developer",
+      "designer",
+      "hr",
+      "marketing",
+      "finance",
+      "blog_writer",
+      "seo_manager",
+      "project_manager",
+    ];
+    const rolesToUse =
+      roles && Array.isArray(roles) && roles.length > 0 ? roles : ["user"];
+    for (const r of rolesToUse) {
+      if (!validRoles.includes(r)) {
+        return NextResponse.json(
+          { error: `Invalid role: ${r}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if user already exists
-    const existingUser = findUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return NextResponse.json(
         { error: "User with this email already exists" },
@@ -54,11 +76,11 @@ export async function POST(request) {
     const hashedPassword = await hashPassword(password);
 
     // Create user
-    const user = addUser({
+    const user = await addUser({
       name,
       email,
       password: hashedPassword,
-      role,
+      roles: rolesToUse,
     });
 
     return NextResponse.json(
@@ -68,7 +90,7 @@ export async function POST(request) {
           _id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          roles: user.roles,
         },
       },
       { status: 201 }

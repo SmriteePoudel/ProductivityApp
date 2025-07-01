@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [assignedTasksRefreshKey, setAssignedTasksRefreshKey] = useState(0);
   const [recentAssignedTasks, setRecentAssignedTasks] = useState([]);
+  const [userManagementOpen, setUserManagementOpen] = useState(false);
 
   useEffect(() => {
     fetchAdminStats();
@@ -130,6 +131,65 @@ export default function AdminDashboard() {
     fetchRecentAssignedTasks();
   };
 
+  // User Management Dropdown Section
+  const userManagementDropdown = (
+    <div className="mt-8">
+      <div className="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+        User Management
+      </div>
+      <ul className="space-y-1 px-4">
+        <li>
+          <button
+            className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+              ["roles", "permissions"].includes(activeTab)
+                ? "bg-purple-100 text-purple-700"
+                : "text-gray-700 hover:bg-purple-50 hover:text-purple-700"
+            }`}
+            onClick={() => setUserManagementOpen((prev) => !prev)}
+          >
+            <span className="text-lg">👥</span>
+            <span>User Management</span>
+            <span className="ml-auto text-xs">
+              {userManagementOpen ? "▲" : "▼"}
+            </span>
+          </button>
+          {userManagementOpen && (
+            <div className="ml-4 mt-1 border-l border-purple-500 pl-2">
+              <ul className="space-y-1">
+                <li>
+                  <button
+                    className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                      activeTab === "roles"
+                        ? "bg-purple-100 text-purple-700"
+                        : "text-gray-700 hover:bg-purple-50 hover:text-purple-700"
+                    }`}
+                    onClick={() => setActiveTab("roles")}
+                  >
+                    <span className="text-lg">🛡️</span>
+                    <span>Roles</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    className={`flex items-center w-full px-4 py-2 rounded-lg transition-colors text-left gap-3 font-medium ${
+                      activeTab === "permissions"
+                        ? "bg-purple-100 text-purple-700"
+                        : "text-gray-700 hover:bg-purple-50 hover:text-purple-700"
+                    }`}
+                    onClick={() => setActiveTab("permissions")}
+                  >
+                    <span className="text-lg">🔑</span>
+                    <span>Permissions</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
+        </li>
+      </ul>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
@@ -232,6 +292,9 @@ export default function AdminDashboard() {
               </button>
             </li>
           </ul>
+
+          {/* User Management Dropdown Section */}
+          {userManagementDropdown}
         </nav>
 
         <div className="p-4 border-t border-pink-200">
@@ -540,15 +603,77 @@ export default function AdminDashboard() {
                             {user.email}
                           </td>
                           <td className="py-3 px-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                user.role === "admin"
-                                  ? "bg-pink-100 text-pink-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }`}
-                            >
-                              {user.role === "admin" ? "👑 Admin" : "👤 User"}
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {(user.roles && user.roles.length > 0
+                                ? user.roles
+                                : [user.role || "user"]
+                              ).map((roleKey) => {
+                                const roleObj = [
+                                  { key: "admin", label: "Admin", icon: "👑" },
+                                  { key: "user", label: "User", icon: "👤" },
+                                  {
+                                    key: "developer",
+                                    label: "Developer",
+                                    icon: "💻",
+                                  },
+                                  {
+                                    key: "designer",
+                                    label: "Designer",
+                                    icon: "🎨",
+                                  },
+                                  { key: "hr", label: "HR", icon: "🧑‍💼" },
+                                  {
+                                    key: "marketing",
+                                    label: "Marketing",
+                                    icon: "📢",
+                                  },
+                                  {
+                                    key: "finance",
+                                    label: "Finance",
+                                    icon: "💰",
+                                  },
+                                  {
+                                    key: "blog_writer",
+                                    label: "Blog Writer",
+                                    icon: "📝",
+                                  },
+                                  {
+                                    key: "seo_manager",
+                                    label: "SEO Manager",
+                                    icon: "🔍",
+                                  },
+                                  {
+                                    key: "project_manager",
+                                    label: "Project Manager",
+                                    icon: "📁",
+                                  },
+                                  {
+                                    key: "moderator",
+                                    label: "Moderator",
+                                    icon: "🛡️",
+                                  },
+                                  {
+                                    key: "editor",
+                                    label: "Editor",
+                                    icon: "✏️",
+                                  },
+                                  {
+                                    key: "viewer",
+                                    label: "Viewer",
+                                    icon: "👁️",
+                                  },
+                                ].find((r) => r.key === roleKey);
+                                return (
+                                  <span
+                                    key={roleKey}
+                                    className={`px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1`}
+                                  >
+                                    <span>{roleObj ? roleObj.icon : "👤"}</span>
+                                    {roleObj ? roleObj.label : roleKey}
+                                  </span>
+                                );
+                              })}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-gray-600">
                             {user.taskCount || 0} tasks
@@ -605,6 +730,22 @@ export default function AdminDashboard() {
 
         {activeTab === "assigned-tasks" && (
           <AssignedTasks refreshKey={assignedTasksRefreshKey} />
+        )}
+
+        {activeTab === "roles" && (
+          <div className="p-6 bg-gradient-to-br from-purple-100 to-purple-200 text-gray-900 rounded-lg shadow-md mb-6">
+            <h2 className="text-2xl font-bold mb-4">Role Management</h2>
+            <p className="text-gray-600">Create and manage user roles</p>
+            {/* Add your RolesManager component here if you have one */}
+          </div>
+        )}
+
+        {activeTab === "permissions" && (
+          <div className="p-6 bg-gradient-to-br from-green-100 to-green-200 text-gray-900 rounded-lg shadow-md mb-6">
+            <h2 className="text-2xl font-bold mb-4">Permission Management</h2>
+            <p className="text-gray-600">Configure role-based permissions</p>
+            {/* Add your PermissionsManager component here if you have one */}
+          </div>
         )}
       </main>
 

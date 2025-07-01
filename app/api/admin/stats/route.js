@@ -7,18 +7,22 @@ import {
   getAllCategories,
   findTasksByUser,
   getActiveUserCount,
-} from "@/lib/db.js";
-import { requireAdmin } from "@/lib/auth.js";
+} from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
+import User from "@/lib/models/User"; // ✅ Corrected import path for consistency
 
 export const GET = requireAdmin(async (request) => {
   try {
     await connectDB();
 
-    const stats = await getSystemStats();
-    const users = await getUsers();
-    const tasks = await getAllTasks();
-    const categories = await getAllCategories();
-    const activeUserCount = await getActiveUserCount();
+    const [stats, users, tasks, categories, activeUserCount] =
+      await Promise.all([
+        getSystemStats(),
+        getUsers(),
+        getAllTasks(),
+        getAllCategories(),
+        getActiveUserCount(),
+      ]);
 
     // Add task count for each user
     const usersWithTaskCount = await Promise.all(
@@ -29,6 +33,7 @@ export const GET = requireAdmin(async (request) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          roles: user.roles || [user.role],
           createdAt: user.createdAt,
           lastLoginAt: user.lastLoginAt,
           taskCount: userTasks.length,
@@ -39,8 +44,8 @@ export const GET = requireAdmin(async (request) => {
     return NextResponse.json({
       stats,
       users: usersWithTaskCount,
-      tasks: tasks.slice(0, 10), // Return first 10 tasks
-      categories: categories.slice(0, 10), // Return first 10 categories
+      tasks: tasks.slice(0, 10),
+      categories: categories.slice(0, 10),
       activeUserCount,
     });
   } catch (error) {
