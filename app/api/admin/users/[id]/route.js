@@ -21,7 +21,7 @@ export async function PUT(request, { params }) {
     }
 
     const { id } = params;
-    const { name, email, password, role } = await request.json();
+    const { name, email, password, role, roles } = await request.json();
 
     // Validate input
     if (!name || !email) {
@@ -31,8 +31,37 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // Validate role
-    if (role && !["user", "admin"].includes(role)) {
+    // Validate roles array if present
+    const validRoles = [
+      "user",
+      "admin",
+      "moderator",
+      "editor",
+      "viewer",
+      "developer",
+      "designer",
+      "hr",
+      "marketing",
+      "finance",
+      "blog_writer",
+      "seo_manager",
+      "project_manager",
+    ];
+    let rolesToUse = undefined;
+    if (roles && Array.isArray(roles)) {
+      for (const r of roles) {
+        if (!validRoles.includes(r)) {
+          return NextResponse.json(
+            { error: `Invalid role: ${r}` },
+            { status: 400 }
+          );
+        }
+      }
+      rolesToUse = roles;
+    }
+
+    // Validate single role if present
+    if (role && !validRoles.includes(role)) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
@@ -43,7 +72,14 @@ export async function PUT(request, { params }) {
     }
 
     // Prepare update data
-    const updateData = { name, email, role };
+    const updateData = { name, email };
+    if (rolesToUse) {
+      updateData.roles = rolesToUse;
+      updateData.role = rolesToUse[0]; // for legacy
+    } else if (role) {
+      updateData.role = role;
+      updateData.roles = [role];
+    }
 
     // Hash password if provided
     if (password && password.trim()) {
@@ -59,6 +95,7 @@ export async function PUT(request, { params }) {
         _id: updatedUser._id,
         name: updatedUser.name,
         email: updatedUser.email,
+        roles: updatedUser.roles,
         role: updatedUser.role,
       },
     });

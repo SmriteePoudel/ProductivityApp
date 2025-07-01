@@ -18,6 +18,11 @@ import DraftArticlesBox from "./DraftArticlesBox";
 import ContentCalendarBox from "./ContentCalendarBox";
 import React from "react";
 import ResearchToolsBox from "./ResearchToolsBox";
+import {
+  PERMISSIONS,
+  ROLE_METADATA,
+  getDefaultPermissions,
+} from "@/lib/role-metadata";
 
 // Placeholder components for Settings, Roles, Permissions
 function Settings({ onProfileUpdate }) {
@@ -530,65 +535,37 @@ function Settings({ onProfileUpdate }) {
   );
 }
 
-function RoleSummaryBox({ users }) {
-  // Build a map of role -> users
-  const roleMap = {};
-  users.forEach((user) => {
-    (user.roles || [user.role || "user"]).forEach((role) => {
-      if (!roleMap[role]) roleMap[role] = [];
-      roleMap[role].push(user);
-    });
-  });
-  const roles = Object.keys(roleMap);
-  return (
-    <div className="mb-8 p-6 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-2xl shadow border border-purple-200 dark:border-purple-700">
-      <h3 className="text-xl font-bold mb-2 text-purple-800 dark:text-purple-200">
-        User Roles Overview
-      </h3>
-      <div className="flex flex-wrap gap-6">
-        {roles.length === 0 ? (
-          <span className="text-gray-500">No roles found.</span>
-        ) : (
-          roles.map((role) => (
-            <div key={role} className="flex flex-col items-start min-w-[120px]">
-              <span className="font-semibold text-purple-700 dark:text-purple-200 mb-1">
-                {role}{" "}
-                <span className="ml-1 text-xs bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100 rounded-full px-2 py-0.5">
-                  {roleMap[role].length}
-                </span>
-              </span>
-              <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                {roleMap[role].map((u) => (
-                  <li key={u._id || u.email}>{u.name || u.email}</li>
-                ))}
-              </ul>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 function RolesManager() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [editUserId, setEditUserId] = useState(null);
+  const [editRoles, setEditRoles] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Map role to description (should match PermissionsManager)
-  const roleDescriptions = {
-    admin: "Full access to all system features and settings.",
-    designer: "Can work on design tasks and manage design assets.",
-    developer: "Can work on development tasks and commit code.",
-    blog_writer: "Can write and manage blog articles.",
-    user: "Can view and edit their own tasks.",
-    hr: "Can manage employees and review performance.",
-    marketing: "Can manage marketing campaigns and view reports.",
-    finance: "Can manage budgets and view financial reports.",
-    seo_manager: "Can manage SEO and view SEO reports.",
-    project_manager: "Can manage projects, assign tasks, and view reports.",
-  };
+  // List of all possible roles
+  const allRoles = [
+    "admin",
+    "hr",
+    "marketing",
+    "finance",
+    "blog_writer",
+    "seo_manager",
+    "project_manager",
+    "developer",
+    "designer",
+    "user",
+    "moderator",
+    "editor",
+    "viewer",
+  ];
 
   useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = () => {
     setLoading(true);
     fetch("/api/admin/stats")
       .then((res) => res.json())
@@ -596,23 +573,75 @@ function RolesManager() {
         setUsers(data.users || []);
       })
       .catch((error) => {
-        console.error("Error fetching users:", error);
+        setError("Error fetching users");
       })
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  };
+
+  const handleEdit = (user) => {
+    setEditUserId(user._id);
+    setEditRoles(user.roles || []);
+    setError("");
+    setSuccess("");
+  };
+
+  const handleCancel = () => {
+    setEditUserId(null);
+    setEditRoles([]);
+    setError("");
+    setSuccess("");
+  };
+
+  const handleRoleChange = (role) => {
+    if (editRoles.includes(role)) {
+      setEditRoles(editRoles.filter((r) => r !== role));
+    } else {
+      setEditRoles([...editRoles, role]);
+    }
+  };
+
+  const handleSave = async (user) => {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch(`/api/admin/users/${user._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: user.name,
+          email: user.email,
+          roles: editRoles,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update roles");
+      setSuccess("Roles updated");
+      setEditUserId(null);
+      setEditRoles([]);
+      fetchUsers();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSuccess(""), 2000);
+    }
+  };
 
   return (
     <div className="space-y-8">
-      <RoleSummaryBox users={users} />
       <div className="text-center">
         <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-4">
           👥 Role Management
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
-          View all users and their assigned roles
+          View and edit user roles. Click a user's roles to edit.
         </p>
+        {error && <div className="text-red-500 mt-2">{error}</div>}
+        {success && <div className="text-green-600 mt-2">{success}</div>}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full table-auto border-collapse border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
@@ -627,9 +656,7 @@ function RolesManager() {
               <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
                 Roles
               </th>
-              <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
-                Role Description
-              </th>
+              <th className="px-6 py-4"></th>
             </tr>
           </thead>
           <tbody>
@@ -646,30 +673,43 @@ function RolesManager() {
                 </td>
               </tr>
             ) : (
-              users.map((user) => {
-                // Get all roles for the user
-                const userRoles =
-                  user.roles && user.roles.length > 0
-                    ? user.roles
-                    : [user.role || "user"];
-                // Get descriptions for all roles
-                const descriptions = userRoles.map(
-                  (role) => roleDescriptions[role] || "Custom role"
-                );
-                return (
-                  <tr
-                    key={user._id}
-                    className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-gray-800 dark:text-gray-200">
-                      {user.name || user.email}
-                    </td>
-                    <td className="px-6 py-4 text-gray-800 dark:text-gray-200">
-                      {user.email}
-                    </td>
-                    <td className="px-6 py-4">
+              users.map((user) => (
+                <tr
+                  key={user._id}
+                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <td className="px-6 py-4 text-gray-800 dark:text-gray-200">
+                    {user.name || user.email}
+                  </td>
+                  <td className="px-6 py-4 text-gray-800 dark:text-gray-200">
+                    {user.email}
+                  </td>
+                  <td className="px-6 py-4">
+                    {editUserId === user._id ? (
                       <div className="flex flex-wrap gap-2">
-                        {userRoles.map((role) => (
+                        {allRoles.map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm border transition-colors ${
+                              editRoles.includes(role)
+                                ? "bg-gradient-to-r from-purple-400 to-pink-400 text-white border-transparent"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600"
+                            }`}
+                            onClick={() => handleRoleChange(role)}
+                            disabled={saving}
+                          >
+                            {role}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        className="flex flex-wrap gap-2 cursor-pointer"
+                        onClick={() => handleEdit(user)}
+                        title="Click to edit roles"
+                      >
+                        {(user.roles || []).map((role) => (
                           <span
                             key={role}
                             className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 dark:from-purple-900 dark:to-pink-900 dark:text-purple-200 rounded-full text-xs font-medium shadow-sm"
@@ -677,18 +717,32 @@ function RolesManager() {
                             {role}
                           </span>
                         ))}
+                        <span className="text-xs text-blue-500 ml-2">Edit</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                      <ul className="list-disc pl-4 space-y-1">
-                        {descriptions.map((desc, idx) => (
-                          <li key={idx}>{desc}</li>
-                        ))}
-                      </ul>
-                    </td>
-                  </tr>
-                );
-              })
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {editUserId === user._id && (
+                      <div className="flex gap-2">
+                        <button
+                          className="px-4 py-1 rounded bg-accent text-white font-semibold shadow"
+                          onClick={() => handleSave(user)}
+                          disabled={saving || editRoles.length === 0}
+                        >
+                          {saving ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          className="px-4 py-1 rounded bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold shadow"
+                          onClick={handleCancel}
+                          disabled={saving}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -2394,27 +2448,7 @@ export default function UnifiedDashboard({
 
   // Main content rendering
   let mainContent = null;
-  if (activeSection === "roles" && user.role === "admin") {
-    mainContent = (
-      <>
-        <div className="p-6 bg-gradient-to-br from-purple-100 to-purple-200 text-gray-900 rounded-lg shadow-md mb-6">
-          <h2 className="text-2xl font-bold mb-4">Role Management</h2>
-          <p className="text-gray-600">Create and manage user roles</p>
-        </div>
-        <RolesManagerBox />
-      </>
-    );
-  } else if (activeSection === "permissions" && user.role === "admin") {
-    mainContent = (
-      <>
-        <div className="p-6 bg-gradient-to-br from-green-100 to-green-200 text-gray-900 rounded-lg shadow-md mb-6">
-          <h2 className="text-2xl font-bold mb-4">Permission Management</h2>
-          <p className="text-gray-600">Configure role-based permissions</p>
-        </div>
-        <PermissionsManager />
-      </>
-    );
-  } else if (activeSection === "dashboard") {
+  if (activeSection === "dashboard") {
     mainContent = (
       <Dashboard
         user={user}
@@ -2447,6 +2481,7 @@ export default function UnifiedDashboard({
             Manage system users and their accounts
           </p>
         </div>
+
         {/* Create User Button */}
         <div className="mb-6">
           <button
@@ -2457,6 +2492,7 @@ export default function UnifiedDashboard({
             Create New User
           </button>
         </div>
+
         {/* Users List */}
         {usersLoading ? (
           <div className="text-center py-8">
@@ -2481,6 +2517,7 @@ export default function UnifiedDashboard({
                 Users ({users.length})
               </h3>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -2597,6 +2634,7 @@ export default function UnifiedDashboard({
             </div>
           </div>
         )}
+
         {/* User Manager Modal */}
         {showUserManager && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -2612,6 +2650,26 @@ export default function UnifiedDashboard({
             </div>
           </div>
         )}
+      </>
+    );
+  } else if (activeSection === "roles" && user.role === "admin") {
+    mainContent = (
+      <>
+        <div className="p-6 bg-gradient-to-br from-purple-100 to-purple-200 text-gray-900 rounded-lg shadow-md mb-6">
+          <h2 className="text-2xl font-bold mb-4">Role Management</h2>
+          <p className="text-gray-600">Create and manage user roles</p>
+        </div>
+        <RolesManager />
+      </>
+    );
+  } else if (activeSection === "permissions" && user.role === "admin") {
+    mainContent = (
+      <>
+        <div className="p-6 bg-gradient-to-br from-green-100 to-green-200 text-gray-900 rounded-lg shadow-md mb-6">
+          <h2 className="text-2xl font-bold mb-4">Permission Management</h2>
+          <p className="text-gray-600">Configure role-based permissions</p>
+        </div>
+        <PermissionsManager user={user} />
       </>
     );
   } else if (activeSection === "templates") {
@@ -2783,7 +2841,11 @@ export default function UnifiedDashboard({
       </aside>
       {/* Main Content */}
       <main className="flex-1 p-6 lg:p-10 overflow-y-auto relative">
-        {mainContent}
+        {activeSection === "settings" ? (
+          <Settings onProfileUpdate={handleProfileUpdate} />
+        ) : (
+          mainContent
+        )}
         {showAddTaskBtn && (
           <button
             className="fixed bottom-8 right-8 z-40 bg-accent text-white rounded-full shadow-lg p-5 text-3xl hover:opacity-90 transition-all duration-200 focus:outline-none focus:ring-4 ring-accent"
@@ -3829,146 +3891,82 @@ function HRReportsBox() {
 }
 
 function PermissionsManager() {
-  const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch("/api/admin/roles")
-      .then((res) => res.json())
-      .then((data) => setRoles(data))
-      .catch(() => setRoles([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Dummy fallback if backend is unreachable
-  const dummyRoles = [
-    {
-      role: "admin",
-      permissions: ["all"],
-      description: "Full access to all system features and settings.",
-    },
-    {
-      role: "designer",
-      permissions: ["view_tasks", "edit_own_tasks", "design_assets"],
-      description: "Can work on design tasks and manage design assets.",
-    },
-    {
-      role: "developer",
-      permissions: ["view_tasks", "edit_own_tasks", "commit_code"],
-      description: "Can work on development tasks and commit code.",
-    },
-    {
-      role: "blog_writer",
-      permissions: ["write_articles", "view_tasks"],
-      description: "Can write and manage blog articles.",
-    },
-    {
-      role: "user",
-      permissions: ["view_tasks", "edit_own_tasks"],
-      description: "Can view and edit their own tasks.",
-    },
-    {
-      role: "hr",
-      permissions: ["manage_employees", "review_performance", "view_reports"],
-      description: "Can manage employees and review performance.",
-    },
-    {
-      role: "marketing",
-      permissions: ["manage_campaigns", "view_reports"],
-      description: "Can manage marketing campaigns and view reports.",
-    },
-    {
-      role: "finance",
-      permissions: ["manage_budgets", "view_financials", "view_reports"],
-      description: "Can manage budgets and view financial reports.",
-    },
-    {
-      role: "seo_manager",
-      permissions: ["manage_seo", "view_reports"],
-      description: "Can manage SEO and view SEO reports.",
-    },
-    {
-      role: "project_manager",
-      permissions: ["manage_projects", "assign_tasks", "view_reports"],
-      description: "Can manage projects, assign tasks, and view reports.",
-    },
+  // List of role keys and their display info
+  const roles = [
+    { key: "admin", name: "Admin", icon: "👑" },
+    { key: "hr", name: "HR", icon: "🧑‍💼" },
+    { key: "marketing", name: "Marketing", icon: "📈" },
+    { key: "blog_writer", name: "Blog Writer", icon: "✍️" },
+    { key: "seo_manager", name: "SEO Manager", icon: "🔍" },
+    { key: "project_manager", name: "Project Manager", icon: "🗂️" },
+    { key: "developer", name: "Developer", icon: "💻" },
+    { key: "designer", name: "Designer", icon: "🎨" },
   ];
-
-  const displayRoles = roles.length > 0 ? roles : dummyRoles;
-
+  const permLabels = [
+    { key: "canAdd", label: "Add" },
+    { key: "canEdit", label: "Edit" },
+    { key: "canDelete", label: "Delete" },
+    { key: "canView", label: "View" },
+    { key: "canManageUsers", label: "Manage Users" },
+    { key: "canManageBlog", label: "Manage Blog" },
+    { key: "canManageMarketing", label: "Manage Marketing" },
+    { key: "canManageSEO", label: "Manage SEO" },
+    { key: "canManageProjects", label: "Manage Projects" },
+    { key: "canManageDesign", label: "Manage Design" },
+    { key: "canManageDevelopment", label: "Manage Development" },
+  ];
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h2 className="text-4xl font-bold bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-          🔑 Permission Management
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
-          View all roles and their permissions
-        </p>
-      </div>
-      {/* Permission structure note */}
-      <div className="mb-4 text-sm text-blue-700 bg-blue-50 dark:bg-blue-900 dark:text-blue-200 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-        <strong>Note:</strong> <span className="font-medium">Admin</span> has{" "}
-        <span className="font-bold">all permissions</span> (full access). Other
-        roles have only the permissions relevant to their responsibilities.
-      </div>
-      <div className="overflow-x-auto">
-        {loading ? (
-          <div className="text-center py-8 text-gray-500">
-            Loading roles and permissions...
-          </div>
-        ) : (
-          <table className="w-full table-auto border-collapse border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
-            <thead className="bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900">
-              <tr>
-                <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
-                  Role
+    <div className="my-12">
+      <h2 className="text-3xl font-bold mb-4 text-center bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent">
+        🛡️ Roles & Permissions Matrix
+      </h2>
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700">
+        <table className="min-w-full table-auto text-sm">
+          <thead className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900">
+            <tr>
+              <th className="px-4 py-3 text-left">Role</th>
+              {permLabels.map((perm) => (
+                <th key={perm.key} className="px-2 py-3 text-center">
+                  {perm.label}
                 </th>
-                <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
-                  Permissions
-                </th>
-                <th className="px-6 py-4 text-left text-gray-800 dark:text-gray-200 font-semibold text-lg">
-                  Description
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayRoles.map((perm) => (
-                <tr
-                  key={perm.role}
-                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <td className="px-6 py-4 text-gray-800 dark:text-gray-200 font-bold">
-                    {perm.role}
-                  </td>
-                  <td className="px-6 py-4">
-                    {perm.role === "admin" ? (
-                      <span className="px-3 py-1 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 dark:from-green-900 dark:to-blue-900 dark:text-green-200 rounded-full text-xs font-medium shadow-sm">
-                        All Permissions
-                      </span>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {perm.permissions.map((p) => (
-                          <span
-                            key={p}
-                            className="px-3 py-1 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 dark:from-green-900 dark:to-blue-900 dark:text-green-200 rounded-full text-xs font-medium shadow-sm"
-                          >
-                            {p}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                    {perm.description}
-                  </td>
-                </tr>
               ))}
-            </tbody>
-          </table>
-        )}
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map((role) => {
+              const perms = getDefaultPermissions(role.key);
+              return (
+                <tr
+                  key={role.key}
+                  className="border-b border-gray-100 dark:border-gray-800"
+                >
+                  <td className="px-4 py-2 font-semibold whitespace-nowrap">
+                    {role.icon} {ROLE_METADATA[role.key]?.name || role.name}
+                  </td>
+                  {permLabels.map((perm) => (
+                    <td key={perm.key} className="px-2 py-2 text-center">
+                      {perms[perm.key] ? (
+                        <span className="text-green-500">✔️</span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+      <p className="text-gray-500 dark:text-gray-400 text-center mt-4">
+        <span className="font-semibold">Admin</span> has all permissions. Others
+        have selective ones.
+      </p>
     </div>
   );
+}
+
+// Add PermissionsManager to the export for use in the dashboard
+export function PermissionsManagerBox() {
+  return <PermissionsManager />;
 }
