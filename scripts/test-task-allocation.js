@@ -6,13 +6,11 @@ const testTaskAllocation = async () => {
   console.log("🧪 Testing Task Allocation System...");
 
   try {
-    // Connect to MongoDB
     const connectionString =
       process.env.MONGODB_URI || "mongodb://localhost:27017/productivity-app";
     await mongoose.connect(connectionString);
     console.log("✅ Connected to MongoDB");
 
-    // Find a non-admin user to assign tasks to
     const nonAdminUser = await User.findOne({ role: { $ne: "admin" } });
     if (!nonAdminUser) {
       console.log(
@@ -25,7 +23,6 @@ const testTaskAllocation = async () => {
       `✅ Found user to assign tasks to: ${nonAdminUser.name} (${nonAdminUser.email})`
     );
 
-    // Create a test task assigned by admin
     const testTask = new Task({
       title: "Test Task from Admin",
       description: "This is a test task assigned by the admin",
@@ -41,7 +38,6 @@ const testTaskAllocation = async () => {
     await testTask.save();
     console.log("✅ Test task created and assigned successfully");
 
-    // Verify the task was created
     const savedTask = await Task.findById(testTask._id);
     console.log("📋 Task details:");
     console.log(`   Title: ${savedTask.title}`);
@@ -50,13 +46,11 @@ const testTaskAllocation = async () => {
     console.log(`   Status: ${savedTask.status}`);
     console.log(`   Priority: ${savedTask.priority}`);
 
-    // Test querying tasks assigned by admin
     const adminAssignedTasks = await Task.find({ assignedBy: "admin" });
     console.log(
       `\n📊 Total tasks assigned by admin: ${adminAssignedTasks.length}`
     );
 
-    // Test querying tasks for the specific user
     const userTasks = await Task.find({ user: nonAdminUser._id });
     console.log(`📊 Total tasks for ${nonAdminUser.name}: ${userTasks.length}`);
 

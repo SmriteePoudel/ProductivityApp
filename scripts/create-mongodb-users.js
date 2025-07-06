@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import User from "../lib/models/User.js";
 
-// MongoDB connection
 const connectMongoDB = async () => {
   try {
     const connectionString =
@@ -16,7 +15,6 @@ const connectMongoDB = async () => {
   }
 };
 
-// Create or update users in MongoDB
 const createUsers = async () => {
   console.log("🔧 Creating/updating users in MongoDB...");
 

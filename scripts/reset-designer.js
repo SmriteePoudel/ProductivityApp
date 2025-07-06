@@ -7,7 +7,6 @@ async function resetDesignerPassword() {
     console.log("🔧 Resetting designer password...");
     await connectDB();
 
-    // Find the designer user
     const designer = await User.findOne({ email: "design@example.com" });
 
     if (!designer) {
@@ -27,7 +26,6 @@ async function resetDesignerPassword() {
     } else {
       console.log("✅ Designer user found, resetting password...");
 
-      // Reset the password
       const hashedPassword = await hashPassword("design123");
       designer.password = hashedPassword;
       await designer.save();
@@ -35,7 +33,6 @@ async function resetDesignerPassword() {
       console.log("✅ Designer password reset to: design123");
     }
 
-    // Verify the user can be found
     const verifyUser = await User.findOne({ email: "design@example.com" });
     if (verifyUser) {
       console.log("✅ Verification successful:");

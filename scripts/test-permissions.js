@@ -7,14 +7,12 @@ async function testPermissions() {
   console.log("🧪 Testing Comprehensive Permission System...\n");
 
   try {
-    // Test 1: Database Connection
     console.log("1. Testing Database Connection...");
     const dbConnected = await connectDB();
     console.log(
       `   ✅ Database connected: ${dbConnected ? "MongoDB" : "In-memory"}\n`
     );
 
-    // Test 2: Role Default Permissions
     console.log("2. Testing Role Default Permissions...");
     Object.values(ROLES).forEach((role) => {
       const permissions = PermissionManager.getDefaultPermissions(role);
@@ -25,7 +23,6 @@ async function testPermissions() {
     });
     console.log("");
 
-    // Test 3: Create Test Users
     console.log("3. Creating Test Users...");
     const testUsers = [];
 
@@ -41,12 +38,10 @@ async function testPermissions() {
     }
     console.log("");
 
-    // Test 4: Permission Checking
     console.log("4. Testing Permission Checking...");
     for (const user of testUsers) {
       console.log(`   Testing ${user.role} (${user.name}):`);
 
-      // Test basic permissions
       const canAdd = PermissionManager.hasPermission(user, PERMISSIONS.CAN_ADD);
       const canEdit = PermissionManager.hasPermission(
         user,

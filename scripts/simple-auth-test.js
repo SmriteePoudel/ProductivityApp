@@ -5,10 +5,8 @@ async function simpleAuthTest() {
   console.log("🧪 Simple Authentication Test...");
 
   try {
-    // Connect to database
     await connectDB();
 
-    // Test finding admin user
     const adminEmail = "admin@example.com";
     console.log(`\n🔍 Looking for user: ${adminEmail}`);
 
@@ -24,7 +22,6 @@ async function simpleAuthTest() {
     console.log(`   Role: ${user.role}`);
     console.log(`   Has password: ${!!user.password}`);
 
-    // Test password verification
     const testPassword = "admin123";
     console.log(`\n🔐 Testing password: ${testPassword}`);
 

@@ -43,7 +43,7 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
         body: JSON.stringify({
           ...formData,
           status: "pending",
-          assignedBy: "admin", // Track who assigned the task
+          assignedBy: "admin",
           assignedAt: new Date().toISOString(),
         }),
       });
@@ -88,7 +88,6 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Task Title */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Task Title *
@@ -104,7 +103,6 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
           />
         </div>
 
-        {/* Task Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Description
@@ -119,7 +117,6 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
           />
         </div>
 
-        {/* Assign To */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Assign To *
@@ -140,7 +137,6 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
           </select>
         </div>
 
-        {/* Priority */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Priority
@@ -158,7 +154,6 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
           </select>
         </div>
 
-        {/* Due Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Due Date
@@ -172,7 +167,6 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
           />
         </div>
 
-        {/* Category */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Category
@@ -192,7 +186,6 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
           </select>
         </div>
 
-        {/* Submit Button */}
         <div className="flex gap-4 pt-4">
           <button
             type="submit"

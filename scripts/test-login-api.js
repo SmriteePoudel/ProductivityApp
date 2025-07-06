@@ -1,4 +1,3 @@
-// Test the login API directly
 const testLoginAPI = async () => {
   console.log("🧪 Testing Login API...");
 
@@ -35,12 +34,9 @@ const testLoginAPI = async () => {
   }
 };
 
-// Check if we're in a browser environment
 if (typeof window !== "undefined") {
-  // Browser environment
   testLoginAPI();
 } else {
-  // Node.js environment - need to use a different approach
   console.log("This script needs to be run in a browser environment");
   console.log("Or you can test the login manually with:");
   console.log("   Email: admin@example.com");

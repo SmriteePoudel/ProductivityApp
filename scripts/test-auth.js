@@ -7,14 +7,12 @@ async function testAuth() {
   console.log("🧪 Testing Authentication System...\n");
 
   try {
-    // Test 1: Database Connection
     console.log("1. Testing Database Connection...");
     const dbConnected = await connectDB();
     console.log(
       `   ✅ Database connected: ${dbConnected ? "MongoDB" : "In-memory"}\n`
     );
 
-    // Test 2: Password Hashing
     console.log("2. Testing Password Hashing...");
     const testPassword = "testpassword123";
     const hashedPassword = await hashPassword(testPassword);
@@ -22,14 +20,12 @@ async function testAuth() {
       `   ✅ Password hashed: ${hashedPassword.substring(0, 20)}...\n`
     );
 
-    // Test 3: Password Comparison
     console.log("3. Testing Password Comparison...");
     const isValidPassword = await comparePassword(testPassword, hashedPassword);
     console.log(
       `   ✅ Password comparison: ${isValidPassword ? "PASS" : "FAIL"}\n`
     );
 
-    // Test 4: User Creation
     console.log("4. Testing User Creation...");
     const testUser = await addUser({
       name: "Test User",
@@ -39,19 +35,16 @@ async function testAuth() {
     });
     console.log(`   ✅ User created: ${testUser.name} (${testUser.email})\n`);
 
-    // Test 5: User Lookup
     console.log("5. Testing User Lookup...");
     const foundUser = await findUserByEmail("test@example.com");
     console.log(
       `   ✅ User found: ${foundUser ? foundUser.name : "NOT FOUND"}\n`
     );
 
-    // Test 6: Token Generation
     console.log("6. Testing Token Generation...");
     const token = generateToken(testUser);
     console.log(`   ✅ Token generated: ${token.substring(0, 20)}...\n`);
 
-    // Test 7: Admin User Test
     console.log("7. Testing Admin User...");
     const adminEmail = "admin@example.com";
     console.log(`🔍 Looking for user: ${adminEmail}`);
@@ -101,5 +94,4 @@ async function testAuth() {
   }
 }
 
-// Run the test
 testAuth();

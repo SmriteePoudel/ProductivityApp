@@ -44,7 +44,7 @@ export default function TaskForm({ onClose, task = null, onTaskCreated }) {
         const data = await response.json();
         setCategories(data.categories || []);
       } else if (response.status === 401) {
-        // User not authenticated, categories will be empty
+        
         console.log("User not authenticated, categories will be empty");
         setCategories([]);
       } else {
@@ -53,7 +53,7 @@ export default function TaskForm({ onClose, task = null, onTaskCreated }) {
       }
     } catch (error) {
       console.error("Fetch categories error:", error);
-      // Set empty categories array so the form can still work
+      
       setCategories([]);
     }
   };
@@ -93,7 +93,7 @@ export default function TaskForm({ onClose, task = null, onTaskCreated }) {
 
       if (response.ok) {
         onClose();
-        // Call the callback to refresh dashboard data
+        
         if (onTaskCreated) {
           onTaskCreated();
         }
