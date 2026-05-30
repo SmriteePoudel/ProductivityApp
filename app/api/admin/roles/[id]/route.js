@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 
-// GET - Fetch all roles
-export const GET = requireAdmin(async (request) => {
+
+export const GET = requireAdmin(async (request, { params }) => {
   try {
-    // For now, return default roles since we don't have a roles collection yet
-    const defaultRoles = [
-      {
+    const { id } = params;
+
+    const defaultRoles = {
+      admin: {
         _id: "admin",
         name: "Administrator",
         key: "admin",
@@ -50,7 +51,7 @@ export const GET = requireAdmin(async (request) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-      {
+      user: {
         _id: "user",
         name: "Standard User",
         key: "user",
@@ -63,7 +64,7 @@ export const GET = requireAdmin(async (request) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-      {
+      moderator: {
         _id: "moderator",
         name: "Moderator",
         key: "moderator",
@@ -93,7 +94,7 @@ export const GET = requireAdmin(async (request) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-      {
+      editor: {
         _id: "editor",
         name: "Editor",
         key: "editor",
@@ -113,11 +114,16 @@ export const GET = requireAdmin(async (request) => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ];
+    };
 
-    return NextResponse.json({ roles: defaultRoles });
+    const role = defaultRoles[id];
+    if (!role) {
+      return NextResponse.json({ error: "Role not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ role });
   } catch (error) {
-    console.error("Get roles error:", error);
+    console.error("Get role error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -125,51 +131,77 @@ export const GET = requireAdmin(async (request) => {
   }
 });
 
-// POST - Create a new role
-export const POST = requireAdmin(async (request) => {
+// PUT - Update a role
+export const PUT = requireAdmin(async (request, { params }) => {
   try {
-    const roleData = await request.json();
+    const { id } = params;
+    const updateData = await request.json();
 
     // Validate required fields
-    if (!roleData.name || !roleData.key) {
+    if (!updateData.name || !updateData.key) {
       return NextResponse.json(
         { error: "Role name and key are required" },
         { status: 400 }
       );
     }
 
-    // Check if role key already exists
-    const existingRoles = [
-      { key: "admin" },
-      { key: "user" },
-      { key: "moderator" },
-      { key: "editor" },
-    ];
-
-    if (existingRoles.some((role) => role.key === roleData.key)) {
+    // Prevent updating admin role key
+    if (id === "admin" && updateData.key !== "admin") {
       return NextResponse.json(
-        { error: "Role key already exists" },
+        { error: "Cannot change admin role key" },
         { status: 400 }
       );
     }
 
-    // Create new role
-    const newRole = {
-      _id: `role_${Date.now()}`,
-      ...roleData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // In a real application, you would save this to the database
-    console.log("New role created:", newRole);
+    // In a real application, you would update this in the database
+    console.log("Role updated:", { id, updateData });
 
     return NextResponse.json({
-      message: "Role created successfully",
-      role: newRole,
+      message: "Role updated successfully",
+      role: {
+        _id: id,
+        ...updateData,
+        updatedAt: new Date(),
+      },
     });
   } catch (error) {
-    console.error("Create role error:", error);
+    console.error("Update role error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+});
+
+// DELETE - Delete a role
+export const DELETE = requireAdmin(async (request, { params }) => {
+  try {
+    const { id } = params;
+
+    // Prevent deleting admin role
+    if (id === "admin") {
+      return NextResponse.json(
+        { error: "Cannot delete admin role" },
+        { status: 400 }
+      );
+    }
+
+    // Prevent deleting user role
+    if (id === "user") {
+      return NextResponse.json(
+        { error: "Cannot delete user role" },
+        { status: 400 }
+      );
+    }
+
+    // In a real application, you would delete this from the database
+    console.log("Role deleted:", id);
+
+    return NextResponse.json({
+      message: "Role deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete role error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

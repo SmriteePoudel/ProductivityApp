@@ -7,16 +7,17 @@ export async function POST(request) {
     const dbConnected = await connectDB();
     console.log(
       "[REGISTER] DB Connected:",
-      dbConnected ? "MongoDB" : "In-memory DB"
+      dbConnected ? "MongoDB" : "In-memory DB",
     );
 
     const { name, email, password, role = "user" } = await request.json();
+    const normalizedEmail = email?.toLowerCase().trim();
 
     // Validate input
-    if (!name || !email || !password) {
+    if (!name || !normalizedEmail || !password) {
       return NextResponse.json(
         { error: "All fields are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -24,7 +25,7 @@ export async function POST(request) {
     if (password.length < 6) {
       return NextResponse.json(
         { error: "Password must be at least 6 characters long" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -37,11 +38,11 @@ export async function POST(request) {
     }
 
     // Check if user already exists (now async)
-    const existingUser = await findUserByEmail(email);
+    const existingUser = await findUserByEmail(normalizedEmail);
     if (existingUser) {
       return NextResponse.json(
         { error: "User already exists" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -54,7 +55,7 @@ export async function POST(request) {
       console.error("[REGISTER] Password hashing failed:", err);
       return NextResponse.json(
         { error: "Password hashing failed" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -63,16 +64,17 @@ export async function POST(request) {
     try {
       user = await addUser({
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword, // Save only the hashed password
         role,
+        roles: [role],
       });
       console.log(`[REGISTER] User created: ${user.email}, role: ${user.role}`);
     } catch (err) {
       console.error("[REGISTER] User creation failed:", err);
       return NextResponse.json(
         { error: "User creation failed", details: String(err) },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -84,7 +86,7 @@ export async function POST(request) {
       console.error("[REGISTER] Token generation failed:", err);
       return NextResponse.json(
         { error: "Token generation failed" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -99,7 +101,7 @@ export async function POST(request) {
           role: user.role,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
 
     // Set cookie
@@ -119,7 +121,7 @@ export async function POST(request) {
         details: String(error),
         stack: error?.stack,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

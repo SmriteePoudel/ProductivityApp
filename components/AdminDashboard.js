@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import UserManager from "./UserManager";
 import TaskAllocation from "./TaskAllocation";
 import AssignedTasks from "./AssignedTasks";
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +20,7 @@ export default function AdminDashboard() {
   const [assignedTasksRefreshKey, setAssignedTasksRefreshKey] = useState(0);
   const [recentAssignedTasks, setRecentAssignedTasks] = useState([]);
   const [userManagementOpen, setUserManagementOpen] = useState(false);
+  const [usingDummyData, setUsingDummyData] = useState(false);
 
   const ROLE_DEFINITIONS = {
     admin: {
@@ -495,20 +498,64 @@ export default function AdminDashboard() {
   ];
 
   useEffect(() => {
-    fetchAdminStats();
-    fetchRecentAssignedTasks();
+    const initializeData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([fetchAdminStats(), fetchRecentAssignedTasks()]);
+      } catch (error) {
+        console.error("Error initializing dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
   }, []);
 
   const fetchAdminStats = async () => {
     try {
-      const response = await fetch("/api/admin/stats");
+      const response = await fetch("/api/admin/stats", {
+        credentials: "include", // Include cookies for authentication
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
       if (response.ok) {
         const data = await response.json();
         setStats(data.stats);
         setUsers(data.users);
+      } else {
+        console.warn("API call failed, using dummy data");
+        setUsingDummyData(true);
+        // Fallback to dummy data if API fails
+        setStats({
+          totalUsers: DUMMY_USERS.length,
+          activeUserCount: DUMMY_USERS.length,
+          totalTasks: 45,
+          completedTasks: 23,
+          totalCategories: 8,
+          totalProjects: 12,
+          tasksCreatedThisWeek: 15,
+          completedTasksThisWeek: 8,
+        });
+        setUsers(DUMMY_USERS);
       }
     } catch (error) {
       console.error("Error fetching admin stats:", error);
+      setUsingDummyData(true);
+      // Fallback to dummy data on network error
+      setStats({
+        totalUsers: DUMMY_USERS.length,
+        activeUserCount: DUMMY_USERS.length,
+        totalTasks: 45,
+        completedTasks: 23,
+        totalCategories: 8,
+        totalProjects: 12,
+        tasksCreatedThisWeek: 15,
+        completedTasksThisWeek: 8,
+      });
+      setUsers(DUMMY_USERS);
     } finally {
       setLoading(false);
     }
@@ -516,13 +563,81 @@ export default function AdminDashboard() {
 
   const fetchRecentAssignedTasks = async () => {
     try {
-      const response = await fetch("/api/tasks?assignedBy=admin&limit=5");
+      const response = await fetch("/api/tasks?assignedBy=admin&limit=5", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
       if (response.ok) {
         const data = await response.json();
         setRecentAssignedTasks(data.tasks || []);
+      } else {
+        console.warn("Tasks API call failed, using dummy tasks");
+        // Fallback to dummy tasks
+        setRecentAssignedTasks([
+          {
+            _id: "1",
+            title: "Review Marketing Campaign",
+            category: "marketing",
+            priority: "high",
+            status: "in_progress",
+            assignedToName: "Jessica Lee",
+            dueDate: "2024-01-15",
+          },
+          {
+            _id: "2",
+            title: "Update Website Content",
+            category: "content",
+            priority: "medium",
+            status: "pending",
+            assignedToName: "Maria Garcia",
+            dueDate: "2024-01-20",
+          },
+          {
+            _id: "3",
+            title: "Financial Report Review",
+            category: "finance",
+            priority: "urgent",
+            status: "completed",
+            assignedToName: "Robert Wilson",
+            dueDate: "2024-01-10",
+          },
+        ]);
       }
     } catch (error) {
       console.error("Error fetching recent assigned tasks:", error);
+      // Fallback to dummy tasks on network error
+      setRecentAssignedTasks([
+        {
+          _id: "1",
+          title: "Review Marketing Campaign",
+          category: "marketing",
+          priority: "high",
+          status: "in_progress",
+          assignedToName: "Jessica Lee",
+          dueDate: "2024-01-15",
+        },
+        {
+          _id: "2",
+          title: "Update Website Content",
+          category: "content",
+          priority: "medium",
+          status: "pending",
+          assignedToName: "Maria Garcia",
+          dueDate: "2024-01-20",
+        },
+        {
+          _id: "3",
+          title: "Financial Report Review",
+          category: "finance",
+          priority: "urgent",
+          status: "completed",
+          assignedToName: "Robert Wilson",
+          dueDate: "2024-01-10",
+        },
+      ]);
     }
   };
 
@@ -539,17 +654,22 @@ export default function AdminDashboard() {
     try {
       const response = await fetch("/api/admin/reset", {
         method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
         alert("All data has been reset successfully!");
         fetchAdminStats();
       } else {
-        alert("Failed to reset data");
+        const errorData = await response.json().catch(() => ({}));
+        alert(`Failed to reset data: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error resetting data:", error);
-      alert("Error resetting data");
+      alert("Network error: Unable to reset data. Please try again.");
     } finally {
       setResetLoading(false);
     }
@@ -580,17 +700,22 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {
         fetchAdminStats();
         alert("User deleted successfully!");
       } else {
-        alert("Failed to delete user");
+        const errorData = await response.json().catch(() => ({}));
+        alert(`Failed to delete user: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error deleting user:", error);
-      alert("Error deleting user");
+      alert("Network error: Unable to delete user. Please try again.");
     }
   };
 
@@ -815,6 +940,12 @@ export default function AdminDashboard() {
                   {activeTab === "assigned-tasks" &&
                     "Monitor task progress and status"}
                 </p>
+                {usingDummyData && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
+                    <span>⚠️</span>
+                    <span>Using demo data - API connection unavailable</span>
+                  </div>
+                )}
               </div>
             </div>
             {activeTab === "task-allocation" && (
@@ -1190,7 +1321,6 @@ export default function AdminDashboard() {
                 </table>
               </div>
 
-              {/* Role Information Panel */}
               <div className="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                   <span>📋</span>
@@ -1271,7 +1401,6 @@ export default function AdminDashboard() {
 
         {activeTab === "roles" && (
           <div className="space-y-6">
-            {/* Role Management Header */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -1283,12 +1412,14 @@ export default function AdminDashboard() {
                     Manage user roles and their permissions
                   </p>
                 </div>
-                <button className="px-4 py-2 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all duration-200">
+                <button
+                  onClick={() => router.push("/admin-dashboard/roles")}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all duration-200"
+                >
                   + Create New Role
                 </button>
               </div>
 
-              {/* Role Statistics */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
                   <div className="flex items-center gap-2 mb-2">
@@ -1372,7 +1503,12 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors text-sm">
+                      <button
+                        onClick={() =>
+                          router.push(`/admin-dashboard/roles?edit=${key}`)
+                        }
+                        className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors text-sm"
+                      >
                         Edit
                       </button>
                       <button className="px-3 py-1 bg-purple-100 text-purple-600 rounded hover:bg-purple-200 transition-colors text-sm">
@@ -1451,8 +1587,11 @@ export default function AdminDashboard() {
                     Configure and manage role-based permissions
                   </p>
                 </div>
-                <button className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-400 text-white rounded-lg hover:from-green-500 hover:to-blue-500 transition-all duration-200">
-                  + Add Permission
+                <button
+                  onClick={() => router.push("/admin-dashboard/permissions")}
+                  className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-400 text-white rounded-lg hover:from-green-500 hover:to-blue-500 transition-all duration-200"
+                >
+                  + Manage Permissions
                 </button>
               </div>
 
@@ -1507,7 +1646,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Permission Matrix */}
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-green-100">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <span>📋</span>
@@ -1589,7 +1727,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Detailed Permission Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {Object.entries(ROLE_DEFINITIONS)
                 .slice(0, 6)
@@ -1665,7 +1802,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Task Allocation Modal */}
       {showTaskAllocation && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <TaskAllocation

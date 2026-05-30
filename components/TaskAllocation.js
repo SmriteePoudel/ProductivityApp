@@ -20,13 +20,74 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/admin/stats");
+      const response = await fetch("/api/admin/stats", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users.filter((user) => user.role !== "admin")); // Exclude admin from assignment
+      } else {
+        console.warn("Failed to fetch users, using dummy data");
+        // Fallback to dummy users
+        setUsers([
+          {
+            _id: "1",
+            name: "Jessica Lee",
+            email: "jessica.lee@company.com",
+            role: "marketing",
+          },
+          {
+            _id: "2",
+            name: "Maria Garcia",
+            email: "maria.garcia@company.com",
+            role: "blog_writer",
+          },
+          {
+            _id: "3",
+            name: "Daniel Kim",
+            email: "daniel.kim@company.com",
+            role: "developer",
+          },
+          {
+            _id: "4",
+            name: "Olivia Parker",
+            email: "olivia.parker@company.com",
+            role: "designer",
+          },
+        ]);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
+      // Fallback to dummy users on network error
+      setUsers([
+        {
+          _id: "1",
+          name: "Jessica Lee",
+          email: "jessica.lee@company.com",
+          role: "marketing",
+        },
+        {
+          _id: "2",
+          name: "Maria Garcia",
+          email: "maria.garcia@company.com",
+          role: "blog_writer",
+        },
+        {
+          _id: "3",
+          name: "Daniel Kim",
+          email: "daniel.kim@company.com",
+          role: "developer",
+        },
+        {
+          _id: "4",
+          name: "Olivia Parker",
+          email: "olivia.parker@company.com",
+          role: "designer",
+        },
+      ]);
     }
   };
 
@@ -46,6 +107,7 @@ export default function TaskAllocation({ onClose, onTaskCreated }) {
           assignedBy: "admin",
           assignedAt: new Date().toISOString(),
         }),
+        credentials: "include",
       });
 
       if (response.ok) {

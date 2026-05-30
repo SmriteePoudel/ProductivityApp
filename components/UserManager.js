@@ -106,6 +106,7 @@ export default function UserManager({ user, onClose, onUserUpdate }) {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: "include",
       });
 
       if (response.ok) {

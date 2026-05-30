@@ -7,14 +7,15 @@ export async function POST(request) {
     console.log("🔐 Login attempt started");
 
     const { email, password } = await request.json();
-    console.log(`📧 Login attempt for email: "${email}"`);
+    const normalizedEmail = email?.toLowerCase().trim();
+    console.log(`📧 Login attempt for email: "${normalizedEmail}"`);
 
     // Validate input
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       console.log("❌ Missing email or password");
       return NextResponse.json(
         { error: "Email and password are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -23,12 +24,12 @@ export async function POST(request) {
     console.log("Database connected:", dbConnected ? "MongoDB" : "In-memory");
 
     // Find user by email (now async)
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmail(normalizedEmail);
     if (!user) {
       console.log(`❌ User not found: ${email}`);
       return NextResponse.json(
         { error: "Invalid credentials" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -40,7 +41,7 @@ export async function POST(request) {
       console.log(`❌ Invalid password for user: ${email}`);
       return NextResponse.json(
         { error: "Invalid credentials" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -62,7 +63,7 @@ export async function POST(request) {
           permissions: user.permissions,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
 
     // Set secure cookie
@@ -80,7 +81,7 @@ export async function POST(request) {
     console.error("❌ Login error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

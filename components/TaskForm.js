@@ -39,12 +39,16 @@ export default function TaskForm({ onClose, task = null, onTaskCreated }) {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("/api/categories");
+      const response = await fetch("/api/categories", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories || []);
       } else if (response.status === 401) {
-        
         console.log("User not authenticated, categories will be empty");
         setCategories([]);
       } else {
@@ -53,7 +57,6 @@ export default function TaskForm({ onClose, task = null, onTaskCreated }) {
       }
     } catch (error) {
       console.error("Fetch categories error:", error);
-      
       setCategories([]);
     }
   };
@@ -87,13 +90,14 @@ export default function TaskForm({ onClose, task = null, onTaskCreated }) {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(taskData),
+        credentials: "include",
       });
 
       const data = await response.json();
 
       if (response.ok) {
         onClose();
-        
+
         if (onTaskCreated) {
           onTaskCreated();
         }

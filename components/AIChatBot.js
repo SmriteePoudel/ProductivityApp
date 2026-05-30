@@ -63,15 +63,13 @@ export default function AIChatBot() {
       >
         💬
       </button>
-      {/* Chat Modal */}
+
       {open && (
         <div className="fixed inset-0 z-[100] pointer-events-none">
-          {/* Chat Window */}
           <div
             className="absolute bottom-24 right-8 w-full max-w-xs sm:max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-pink-200 dark:border-purple-700 flex flex-col overflow-hidden animate-fadeInUp pointer-events-auto"
             style={{ minWidth: 320 }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-200 to-purple-200 dark:from-gray-800 dark:to-purple-900 border-b border-pink-100 dark:border-purple-700">
               <span className="font-bold text-pink-600 dark:text-pink-200 text-lg flex items-center gap-2">
                 <span>🤖</span> AI Assistant
@@ -84,7 +82,7 @@ export default function AIChatBot() {
                 ×
               </button>
             </div>
-            {/* Messages */}
+
             <div
               className="flex-1 p-4 space-y-2 overflow-y-auto bg-pastel-pink/10 dark:bg-gray-900/60"
               style={{ minHeight: 240, maxHeight: 320 }}
@@ -121,7 +119,7 @@ export default function AIChatBot() {
               )}
               <div ref={messagesEndRef} />
             </div>
-            {/* Input */}
+
             <form
               onSubmit={sendMessage}
               className="flex items-center gap-2 p-3 border-t border-pink-100 dark:border-purple-700 bg-pastel-pink/30 dark:bg-gray-800"

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 
-// Fix in-memory database passwords
+
 const fixPasswords = async () => {
   console.log("🔧 Fixing in-memory database passwords...");
 

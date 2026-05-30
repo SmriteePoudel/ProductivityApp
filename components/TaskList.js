@@ -69,7 +69,12 @@ export default function TaskList() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("/api/categories");
+      const response = await fetch("/api/categories", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories || []);
@@ -85,6 +90,7 @@ export default function TaskList() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -106,6 +112,10 @@ export default function TaskList() {
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {

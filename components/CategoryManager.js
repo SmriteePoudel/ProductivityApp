@@ -91,7 +91,12 @@ export default function CategoryManager({ onClose, onCategoryUpdate }) {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("/api/categories");
+      const response = await fetch("/api/categories", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories || []);
@@ -117,6 +122,7 @@ export default function CategoryManager({ onClose, onCategoryUpdate }) {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -145,6 +151,10 @@ export default function CategoryManager({ onClose, onCategoryUpdate }) {
     try {
       const response = await fetch(`/api/categories/${categoryId}`, {
         method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (response.ok) {

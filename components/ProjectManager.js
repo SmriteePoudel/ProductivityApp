@@ -65,12 +65,14 @@ export default function ProjectManager() {
     { value: "cancelled", label: "Cancelled", color: "text-red-600" },
   ];
 
-  // Fetch projects
   const fetchProjects = async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/projects", {
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
       if (response.ok) {
         const data = await response.json();
